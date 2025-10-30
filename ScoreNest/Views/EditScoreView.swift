@@ -6,6 +6,7 @@ struct EditScoreView: View {
 
     @State private var title = ""
     @State private var pages: [ScorePage] = []
+    @State private var actionMode: ActionMode? = nil
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -27,8 +28,21 @@ struct EditScoreView: View {
                 Text("当前乐谱页面数量: \(pages.count)")
                     .foregroundStyle(.secondary)
                 
+                if let mode = actionMode, let src = sourcePage(for: mode) {
+                    HStack {
+                        Text(instructionText(for: mode, source: src))
+                            .font(.callout)
+                            .foregroundStyle(.blue)
+                        Spacer()
+                        Button("取消选择") { actionMode = nil }
+                            .buttonStyle(.borderless)
+                    }
+                }
+                
                 ForEach(pages.sorted { $0.pageNumber < $1.pageNumber }) { page in
                     ScorePageThumbnailView(page: page)
+                        .contentShape(Rectangle())
+                        .onTapGesture { handleTapOnPage(page) }
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
                                 deletePageLocally(page)
@@ -37,6 +51,16 @@ struct EditScoreView: View {
                             }
                         }
                         .contextMenu {
+                            Button {
+                                actionMode = .swap(sourceID: page.id)
+                            } label: {
+                                Label("交换页面", systemImage: "arrow.left.arrow.right")
+                            }
+                            Button {
+                                actionMode = .moveBefore(sourceID: page.id)
+                            } label: {
+                                Label("调整顺序", systemImage: "arrow.up.to.line")
+                            }
                             Button(role: .destructive) {
                                 deletePageLocally(page)
                             } label: {
@@ -87,17 +111,77 @@ struct EditScoreView: View {
             pages.removeAll { $0.id == page.id }
             // 删除后根据当前列表的显示顺序重新编号页码
             renumberPagesAccordingToViewOrder()
+            if let mode = actionMode, isSource(page: page, of: mode) { actionMode = nil }
         }
     }
     
     private func renumberPagesAccordingToViewOrder() {
-        // 当前视图的顺序与 ForEach 一致：按 pageNumber 升序
-        let ordered = pages.sorted { $0.pageNumber < $1.pageNumber }
-        for (index, p) in ordered.enumerated() {
-            p.pageNumber = index + 1
+        // 按当前数组顺序重排页码 1...N
+        for (index, p) in pages.enumerated() { p.pageNumber = index + 1 }
+    }
+    
+    // MARK: - 交换 / 移动
+    private enum ActionMode { case swap(sourceID: UUID), moveBefore(sourceID: UUID) }
+    
+    private func sourcePage(for mode: ActionMode) -> ScorePage? {
+        switch mode {
+        case .swap(let id), .moveBefore(let id):
+            return pages.first(where: { $0.id == id })
         }
-        // 赋值以触发视图刷新（虽然 ForEach 会再次排序，但可确保状态更新）
+    }
+    
+    private func isSource(page: ScorePage, of mode: ActionMode) -> Bool {
+        switch mode {
+        case .swap(let id), .moveBefore(let id):
+            return page.id == id
+        }
+    }
+    
+    private func instructionText(for mode: ActionMode, source: ScorePage) -> String {
+        switch mode {
+        case .swap:
+            return "选择目标页面，与第 \(source.pageNumber) 页交换"
+        case .moveBefore:
+            return "选择目标页面，把第 \(source.pageNumber) 页放到其前面"
+        }
+    }
+    
+    private func handleTapOnPage(_ target: ScorePage) {
+        guard let mode = actionMode, let source = sourcePage(for: mode) else { return }
+        guard source.id != target.id else { return }
+        withAnimation {
+            switch mode {
+            case .swap:
+                swapPages(sourceID: source.id, targetID: target.id)
+            case .moveBefore:
+                movePageBefore(sourceID: source.id, targetID: target.id)
+            }
+        }
+    }
+    
+    private func swapPages(sourceID: UUID, targetID: UUID) {
+        // 以当前可见顺序（按页码升序）为基准交换
+        var ordered = pages.sorted { $0.pageNumber < $1.pageNumber }
+        guard let i = ordered.firstIndex(where: { $0.id == sourceID }),
+              let j = ordered.firstIndex(where: { $0.id == targetID }) else { return }
+        ordered.swapAt(i, j)
         pages = ordered
+        renumberPagesAccordingToViewOrder()
+        actionMode = nil
+    }
+    
+    private func movePageBefore(sourceID: UUID, targetID: UUID) {
+        // 以当前可见顺序为基准移动到目标之前
+        var ordered = pages.sorted { $0.pageNumber < $1.pageNumber }
+        guard let from = ordered.firstIndex(where: { $0.id == sourceID }),
+              let toOriginal = ordered.firstIndex(where: { $0.id == targetID }) else { return }
+        let moving = ordered.remove(at: from)
+        var to = toOriginal
+        if from < to { to -= 1 }
+        ordered.insert(moving, at: to)
+        pages = ordered
+        renumberPagesAccordingToViewOrder()
+        actionMode = nil
     }
     
 }
