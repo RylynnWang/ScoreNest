@@ -34,8 +34,29 @@ struct ScorePageView: View {
     }
 
     private func loadUIImage(named: String) -> UIImage? {
-        // Load from asset catalog using asset name (imageset name)
-        return UIImage(named: named)
+        // 1) Try asset catalog
+        if let img = UIImage(named: named) { return img }
+        
+        // 2) Absolute path
+        if FileManager.default.fileExists(atPath: named) {
+            return UIImage(contentsOfFile: named)
+        }
+        
+        // 3) Relative path under Application Support
+        if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+            let direct = appSupport.appendingPathComponent(named)
+            if FileManager.default.fileExists(atPath: direct.path) {
+                return UIImage(contentsOfFile: direct.path)
+            }
+            let nested = appSupport
+                .appendingPathComponent("ScoreNestImages", isDirectory: true)
+                .appendingPathComponent(named)
+            if FileManager.default.fileExists(atPath: nested.path) {
+                return UIImage(contentsOfFile: nested.path)
+            }
+        }
+        
+        return nil
     }
 }
 

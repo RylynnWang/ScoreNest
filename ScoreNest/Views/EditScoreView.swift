@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
 
 struct EditScoreView: View {
     let score: MusicScore
@@ -7,6 +8,7 @@ struct EditScoreView: View {
     @State private var title = ""
     @State private var pages: [ScorePage] = []
     @State private var actionMode: ActionMode? = nil
+    @State private var selectedItems: [PhotosPickerItem] = []
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -68,6 +70,15 @@ struct EditScoreView: View {
                             }
                         }
                 }
+
+                PhotosPicker(
+                    selection: $selectedItems,
+                    maxSelectionCount: 20,
+                    matching: .images
+                ) {
+                    Label("添加图片", systemImage: "photo.on.rectangle.angled")
+                }
+                .buttonStyle(.borderless)
             }
         }
         .navigationTitle("编辑乐谱")
@@ -89,6 +100,9 @@ struct EditScoreView: View {
                 .tint(.blue)
             }
         }
+        .onChange(of: selectedItems) { _, newItems in
+            Task { await handlePickedItems(newItems) }
+        }
     }
 
     private func saveEdits() throws {
@@ -101,6 +115,15 @@ struct EditScoreView: View {
         let toDelete = score.pages.filter { !remainingIDs.contains($0.id) }
         for p in toDelete {
             modelContext.delete(p)
+        }
+
+        // 同步新增：将当前状态中新添加的页面插入到模型
+        let existingIDs = Set(score.pages.map { $0.id })
+        let toInsert = pages.filter { !existingIDs.contains($0.id) }
+        for p in toInsert {
+            p.score = score
+            score.pages.append(p)
+            modelContext.insert(p)
         }
         
         try modelContext.save()
@@ -184,6 +207,62 @@ struct EditScoreView: View {
         actionMode = nil
     }
     
+}
+
+// MARK: - Photos Picker & File Saving
+extension EditScoreView {
+    private func imagesDirectoryURL() throws -> URL {
+        let fm = FileManager.default
+        guard let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            throw NSError(domain: "ScoreNest", code: 1001, userInfo: [NSLocalizedDescriptionKey: "无法定位 Application Support 目录"])
+        }
+        let dir = appSupport.appendingPathComponent("ScoreNestImages", isDirectory: true)
+        if !fm.fileExists(atPath: dir.path) {
+            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+        return dir
+    }
+
+    private func saveImage(_ image: UIImage, with id: UUID) throws -> String {
+        let dir = try imagesDirectoryURL() // .../Application Support/ScoreNestImages
+        let relativePath = "ScoreNestImages/" + id.uuidString + ".jpg"
+        let absoluteURL = dir.appendingPathComponent(id.uuidString + ".jpg")
+        guard let data = image.jpegData(compressionQuality: 0.88) ?? image.pngData() else {
+            throw NSError(domain: "ScoreNest", code: 1002, userInfo: [NSLocalizedDescriptionKey: "无法编码图片数据"])
+        }
+        try data.write(to: absoluteURL, options: [.atomic])
+        return relativePath
+    }
+
+    private func handlePickedItems(_ items: [PhotosPickerItem]) async {
+        guard !items.isEmpty else { return }
+        var newPages: [ScorePage] = []
+        for item in items {
+            do {
+                if let data = try await item.loadTransferable(type: Data.self),
+                    let img = UIImage(data: data) {
+                    let pageID = UUID()
+                    let relativePath = try saveImage(img, with: pageID)
+                    let newPage = ScorePage(
+                        id: pageID,
+                        imageFileName: relativePath, // 存相对路径 ScoreNestImages/<uuid>.jpg
+                        pageNumber: (pages.count + newPages.count + 1)
+                    )
+                    newPages.append(newPage)
+                }
+            } catch {
+                print("添加图片失败: \(error)")
+            }
+        }
+        if !newPages.isEmpty {
+            withAnimation {
+                pages.append(contentsOf: newPages)
+                renumberPagesAccordingToViewOrder()
+            }
+        }
+        // 清空选择，避免重复触发
+        selectedItems = []
+    }
 }
 
 #Preview(traits: .musicScoresSampleData) {
