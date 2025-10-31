@@ -5,8 +5,8 @@ struct ScoreView: View {
     let score: MusicScore
 
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 16) {
+        ZoomableScrollView(minScale: 0.20, maxScale: 5.0) {
+            VStack(spacing: 16) {
                 ForEach(score.pages.sorted(by: { $0.pageNumber < $1.pageNumber })) { page in
                     ScorePageView(page: page)
                 }
