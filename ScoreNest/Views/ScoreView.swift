@@ -3,6 +3,7 @@ import SwiftData
 
 struct ScoreView: View {
     let score: MusicScore
+    @State private var showAutoPlayAlert: Bool = false
 
     var body: some View {
         ZoomableScrollView(minScale: 0.20, maxScale: 5.0) {
@@ -23,15 +24,24 @@ struct ScoreView: View {
                     NavigationLink(destination: EditAutoPlayView(score: score)) {
                         Label("编辑自动播放", systemImage: "gearshape")
                     }
-                    Button {
-                        
-                    } label: {
-                        Label("开始自动播放", systemImage: "play.circle")
+                    if let tl = score.autoPlayTimeline {
+                        NavigationLink(destination: AutoPlayView(timeline: tl)) {
+                            Label("开始自动播放", systemImage: "play.circle")
+                        }
+                    } else {
+                        Button {
+                            showAutoPlayAlert = true
+                        } label: {
+                            Label("开始自动播放", systemImage: "play.circle")
+                        }
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
             }
+        }
+        .alert("请先编辑自动播放", isPresented: $showAutoPlayAlert) {
+            Button("好的") {}
         }
     }
 }

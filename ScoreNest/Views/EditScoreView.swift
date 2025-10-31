@@ -236,7 +236,7 @@ extension EditScoreView {
         // 尝试优先编码为 JPEG，失败则回退到 PNG，并同步更新扩展名
         let data: Data
         let ext: String
-        if let jpeg = image.jpegData(compressionQuality: 0.88) {
+        if let jpeg = image.jpegData(compressionQuality: 0.90) {
             data = jpeg
             ext = "jpg"
         } else if let png = image.pngData() {

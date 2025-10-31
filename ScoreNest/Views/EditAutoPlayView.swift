@@ -24,8 +24,11 @@ struct EditAutoPlayView: View {
                 HStack {
                     Text("统一宽度")
                     Spacer()
-                    Slider(value: $widthRatio, in: 0.3...1.2, step: 0.01)
+                    Slider(value: $widthRatio, in: 0.3...1.3, step: 0.01)
                         .frame(maxWidth: 200)
+                        .onChange(of: widthRatio) { oldValue, newValue in
+                            print("🔧 EditAutoPlayView: Slider changed from \(oldValue) to \(newValue)")
+                        }
                     Text(String(format: "%.2f", widthRatio))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -111,14 +114,17 @@ struct EditAutoPlayView: View {
         guard let t = score.autoPlayTimeline else { return }
         baseDuration = t.baseScoreDurationSec
         widthRatio = t.defaultWidthRatio
+        print("🔧 EditAutoPlayView: Initialized widthRatio = \(widthRatio) from timeline.defaultWidthRatio = \(t.defaultWidthRatio)")
     }
 
     private func saveEdits() {
         guard let t = score.autoPlayTimeline else { return }
+        print("🔧 EditAutoPlayView: Saving widthRatio = \(widthRatio) to timeline.defaultWidthRatio")
         t.baseScoreDurationSec = baseDuration
         t.defaultWidthRatio = widthRatio
         do {
             try modelContext.save()
+            print("🔧 EditAutoPlayView: Save successful, timeline.defaultWidthRatio = \(t.defaultWidthRatio)")
         } catch {
             print("保存失败: \(error)")
         }
