@@ -1,10 +1,3 @@
-//
-//  MusicScore+Sample.swift
-//  ScoreNest
-//
-//  Created by 王御嘉 on 2025/10/30.
-//
-
 extension MusicScore {
     
     /// Provides an array of sample `MusicScore` instances for preview purposes.
