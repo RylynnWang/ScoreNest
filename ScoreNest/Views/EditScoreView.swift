@@ -211,12 +211,20 @@ struct EditScoreView: View {
 
 // MARK: - Photos Picker & File Saving
 extension EditScoreView {
+    // 统一管理图片子目录名称，避免到处写魔法字符串
+    private var imagesSubdirectory: String { "ScoreNestImages" }
+
+    // 相对路径构造函数，避免直接字符串相加
+    private func relativeImagePath(for fileName: String) -> String {
+        NSString.path(withComponents: [imagesSubdirectory, fileName])
+    }
+
     private func imagesDirectoryURL() throws -> URL {
         let fm = FileManager.default
         guard let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
             throw NSError(domain: "ScoreNest", code: 1001, userInfo: [NSLocalizedDescriptionKey: "无法定位 Application Support 目录"])
         }
-        let dir = appSupport.appendingPathComponent("ScoreNestImages", isDirectory: true)
+        let dir = appSupport.appendingPathComponent(imagesSubdirectory, isDirectory: true)
         if !fm.fileExists(atPath: dir.path) {
             try fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }
@@ -225,13 +233,24 @@ extension EditScoreView {
 
     private func saveImage(_ image: UIImage, with id: UUID) throws -> String {
         let dir = try imagesDirectoryURL() // .../Application Support/ScoreNestImages
-        let relativePath = "ScoreNestImages/" + id.uuidString + ".jpg"
-        let absoluteURL = dir.appendingPathComponent(id.uuidString + ".jpg")
-        guard let data = image.jpegData(compressionQuality: 0.88) ?? image.pngData() else {
+        // 尝试优先编码为 JPEG，失败则回退到 PNG，并同步更新扩展名
+        let data: Data
+        let ext: String
+        if let jpeg = image.jpegData(compressionQuality: 0.88) {
+            data = jpeg
+            ext = "jpg"
+        } else if let png = image.pngData() {
+            data = png
+            ext = "png"
+        } else {
             throw NSError(domain: "ScoreNest", code: 1002, userInfo: [NSLocalizedDescriptionKey: "无法编码图片数据"])
         }
+
+        let fileName = id.uuidString + "." + ext
+        // 这里的 dir 已经是 .../Application Support/ScoreNestImages，因此不需要再追加子目录
+        let absoluteURL = dir.appendingPathComponent(fileName, isDirectory: false)
         try data.write(to: absoluteURL, options: [.atomic])
-        return relativePath
+        return relativeImagePath(for: fileName)
     }
 
     private func handlePickedItems(_ items: [PhotosPickerItem]) async {
