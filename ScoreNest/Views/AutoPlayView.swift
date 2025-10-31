@@ -4,11 +4,20 @@ import UIKit
 
 struct AutoPlayView: View {
     let timeline: AutoPlayTimeline
+    @State private var isPlaying: Bool = false
 
     var body: some View {
-        AutoPlayScrollView(timeline: timeline)
+        AutoPlayScrollView(timeline: timeline, isPlaying: $isPlaying)
             .navigationTitle("自动播放")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { isPlaying.toggle() }) {
+                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                    }
+                    .accessibilityLabel(isPlaying ? "暂停" : "开始")
+                }
+            }
     }
 }
 
@@ -18,6 +27,7 @@ struct AutoPlayView: View {
 // - Simple mode (non-normalized): base speed = totalPixels / baseDuration
 struct AutoPlayScrollView: UIViewRepresentable {
     let timeline: AutoPlayTimeline
+    var isPlaying: Binding<Bool>
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -28,9 +38,13 @@ struct AutoPlayScrollView: UIViewRepresentable {
         scrollView.backgroundColor = .systemBackground
         scrollView.showsVerticalScrollIndicator = false
         scrollView.showsHorizontalScrollIndicator = false
-        scrollView.isScrollEnabled = false
-        scrollView.bounces = false
+        scrollView.isScrollEnabled = true
+        scrollView.bounces = true
+        scrollView.alwaysBounceVertical = true
+        scrollView.alwaysBounceHorizontal = false
+        scrollView.isDirectionalLockEnabled = true
         scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.delegate = context.coordinator
 
         let contentView = UIView()
         contentView.translatesAutoresizingMaskIntoConstraints = false
@@ -63,13 +77,16 @@ struct AutoPlayScrollView: UIViewRepresentable {
 
         // Defer configuration to next runloop so SwiftUI can size the scrollView
         DispatchQueue.main.async {
+            context.coordinator.isPlayingBinding = isPlaying
             context.coordinator.configure(with: timeline, scrollView: scrollView, stackView: stack)
+            context.coordinator.setPlaying(isPlaying.wrappedValue)
         }
         return scrollView
     }
 
     func updateUIView(_ uiView: UIScrollView, context: Context) {
-        // In this first version, timeline is considered immutable during playback.
+        // Respond to play/pause toggles
+        context.coordinator.setPlaying(isPlaying.wrappedValue)
     }
 
     static func dismantleUIView(_ uiView: UIScrollView, coordinator: Coordinator) {
@@ -82,6 +99,8 @@ struct AutoPlayScrollView: UIViewRepresentable {
         var stackWidthConstraint: NSLayoutConstraint?
         var displayLink: CADisplayLink?
         var lastTimestamp: CFTimeInterval?
+        var isPlaying: Bool = false
+        var isPlayingBinding: Binding<Bool>?
 
         // Playback metrics
         var endOffsets: [CGFloat] = []
@@ -142,20 +161,18 @@ struct AutoPlayScrollView: UIViewRepresentable {
             
             updateHorizontalInsets()
 
-            // Compute end offsets for each segment (bottom Y of arranged subview)
-            var cumulative: CGFloat = 0
-            var computedEnd: [CGFloat] = []
+            // Compute end offsets so that each segment's bottom aligns with viewport bottom
+            // This makes a segment "fully visible" when reaching its end.
+            let viewportHeight = scrollView.bounds.height
+            let maxScrollableY = max(0, scrollView.contentSize.height - viewportHeight)
+            var ends: [CGFloat] = []
             for v in stackView.arrangedSubviews {
-                cumulative += v.bounds.height + stackView.spacing
-                computedEnd.append(cumulative)
+                // bottom of v relative to content top = stackView.frame.minY + v.frame.maxY
+                let bottomY = stackView.frame.minY + v.frame.maxY
+                let endY = max(0, min(bottomY - viewportHeight, maxScrollableY))
+                ends.append(endY)
             }
-            if !computedEnd.isEmpty {
-                // account for top/bottom padding (16 + 16) already included by constraints; spacing accounted above
-                // The content is inside contentLayoutGuide, so we can directly use cumulative values
-                self.endOffsets = computedEnd
-            } else {
-                self.endOffsets = []
-            }
+            self.endOffsets = ends
 
             // Simple mode speed calculation
             let totalPixels: CGFloat = endOffsets.last ?? 0
@@ -163,7 +180,7 @@ struct AutoPlayScrollView: UIViewRepresentable {
             self.speeds = timeline.segments.sorted { $0.order < $1.order }.map { CGFloat(base) * CGFloat($0.speedFactor) }
             self.currentIndex = 0
 
-            start()
+            // Start/stop will be controlled by setPlaying() invoked after configure
         }
 
         func scrollViewDidLayoutSubviews(_ scrollView: UIScrollView) {
@@ -181,6 +198,10 @@ struct AutoPlayScrollView: UIViewRepresentable {
             scrollView.layoutIfNeeded()
             updateHorizontalInsets()
             print("🔧 scrollViewDidLayoutSubviews: viewportWidth = \(viewportWidth), new stackWidth = \(widthConstraint.constant), contentSize = \(scrollView.contentSize)")
+        }
+
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            updateCurrentIndex(forY: scrollView.contentOffset.y)
         }
 
         func start() {
@@ -201,6 +222,12 @@ struct AutoPlayScrollView: UIViewRepresentable {
             guard let scrollView else { return }
             guard !endOffsets.isEmpty, !speeds.isEmpty else { return }
 
+            // Do not fight user gestures; skip updates while dragging/decelerating
+            if scrollView.isDragging || scrollView.isDecelerating {
+                lastTimestamp = link.timestamp
+                return
+            }
+
             let dt: CFTimeInterval
             if let last = lastTimestamp { dt = link.timestamp - last } else { dt = link.duration }
             lastTimestamp = link.timestamp
@@ -215,12 +242,21 @@ struct AutoPlayScrollView: UIViewRepresentable {
                 if currentIndex >= endOffsets.count {
                     // Reached end; stop
                     stop()
+                    // Sync playing state to UI (auto pause)
+                    isPlayingBinding?.wrappedValue = false
+                    return
                 }
             }
 
             // Preserve current horizontal offset to avoid breaking centering
             let currentX = scrollView.contentOffset.x
             scrollView.setContentOffset(CGPoint(x: currentX, y: newY), animated: false)
+        }
+
+        func setPlaying(_ playing: Bool) {
+            if playing == isPlaying { return }
+            isPlaying = playing
+            if playing { start() } else { stop() }
         }
 
         // MARK: - Helpers
@@ -249,6 +285,13 @@ struct AutoPlayScrollView: UIViewRepresentable {
                 scrollView.setContentOffset(CGPoint(x: targetX, y: scrollView.contentOffset.y), animated: false)
             }
             print("🔧 updateHorizontalInsets: applied contentInset = \(scrollView.contentInset), offsetX = \(scrollView.contentOffset.x)")
+        }
+
+        private func updateCurrentIndex(forY y: CGFloat) {
+            guard !endOffsets.isEmpty else { currentIndex = 0; return }
+            var idx = 0
+            while idx < endOffsets.count && y >= endOffsets[idx] { idx += 1 }
+            currentIndex = min(idx, endOffsets.count - 1)
         }
         private func loadUIImage(named: String) -> UIImage? {
             if let img = UIImage(named: named) { return img }
