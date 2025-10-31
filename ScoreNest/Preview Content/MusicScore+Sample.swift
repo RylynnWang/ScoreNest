@@ -1,5 +1,30 @@
+import Foundation
+
 extension MusicScore {
-    static let projectBaseRoot = "/Users/wangyujia/Programming/XCodeProject/ScoreNest/"
+    // 动态计算项目根路径：从当前源文件开始向上查找包含 xcodeproj 的目录
+    static let projectBaseRoot: String = {
+        let fileURL = URL(fileURLWithPath: #file)
+        var dirURL = fileURL.deletingLastPathComponent() // .../ScoreNest/Preview Content
+        let fm = FileManager.default
+
+        // 向上最多 6 层查找，遇到 ScoreNest.xcodeproj 即认为是项目根
+        for _ in 0..<6 {
+            let xcodeproj = dirURL.appendingPathComponent("ScoreNest.xcodeproj")
+            if fm.fileExists(atPath: xcodeproj.path) {
+                let path = dirURL.path
+                return path.hasSuffix("/") ? path + "" : path + "/"
+            }
+            dirURL.deleteLastPathComponent()
+        }
+
+        // 回退：按常见结构返回上三级作为根 (/ScoreNest/ScoreNest/Preview Content → /ScoreNest)
+        let fallback = fileURL
+            .deletingLastPathComponent() // Preview Content
+            .deletingLastPathComponent() // ScoreNest (app 源码目录)
+            .deletingLastPathComponent() // 项目根目录
+        let path = fallback.path
+        return path.hasSuffix("/") ? path + "" : path + "/"
+    }()
     
     /// Provides an array of sample `MusicScore` instances for preview purposes.
     static var sampleScores: [MusicScore] {
