@@ -24,7 +24,22 @@ struct ScoreListView: View {
                                 .font(.footnote)
                         }
                     }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            deleteScore(score)
+                        } label: {
+                            Label("删除", systemImage: "trash")
+                        }
+                    }
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            deleteScore(score)
+                        } label: {
+                            Label("删除", systemImage: "trash")
+                        }
+                    }
                 }
+                .onDelete(perform: deleteScores)
             }
             .navigationTitle("乐谱")
             .toolbar {
@@ -46,6 +61,27 @@ struct ScoreListView: View {
             try modelContext.save()
         } catch {
             print("Failed to save new score: \(error)")
+        }
+    }
+    
+    private func deleteScores(at offsets: IndexSet) {
+        for index in offsets {
+            let score = scores[index]
+            modelContext.delete(score)
+        }
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to delete scores: \(error)")
+        }
+    }
+    
+    private func deleteScore(_ score: MusicScore) {
+        modelContext.delete(score)
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to delete score: \(error)")
         }
     }
 }
