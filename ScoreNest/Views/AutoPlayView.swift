@@ -188,7 +188,7 @@ struct AutoPlayScrollView: UIViewRepresentable {
             guard let widthConstraint = stackWidthConstraint else { return }
             let viewportWidth = scrollView.bounds.width
             let timelineRatio: CGFloat
-            if let sv = self.stackView, let parentView = sv.superview, parentView is UIView {
+            if self.stackView?.superview != nil {
                 // Use last known ratio from constraint
                 timelineRatio = widthConstraint.constant / max(viewportWidth, 1)
             } else {
