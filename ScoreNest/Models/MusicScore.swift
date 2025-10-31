@@ -9,6 +9,10 @@ final class MusicScore:Identifiable {
     
     @Relationship(deleteRule: .cascade, inverse: \ScorePage.score)
     var pages: [ScorePage] = []
+
+    // Optional AutoPlay timeline; deleting the score cascades to its timeline.
+    @Relationship(deleteRule: .cascade, inverse: \AutoPlayTimeline.score)
+    var autoPlayTimeline: AutoPlayTimeline? = nil
     
     init(id: UUID = UUID(), title: String = "Untitled Score", createdAt: Date = Date(), pages: [ScorePage]) {
         self.id = id
