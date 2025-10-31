@@ -20,9 +20,7 @@ struct ScoreView: View {
                     NavigationLink(destination: EditScoreView(score: score)) {
                         Label("编辑乐谱", systemImage: "pencil")
                     }
-                    Button {
-                        
-                    } label: {
+                    NavigationLink(destination: EditAutoPlayView(score: score)) {
                         Label("编辑自动播放", systemImage: "gearshape")
                     }
                     Button {
