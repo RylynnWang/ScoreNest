@@ -1,20 +1,24 @@
 import Foundation
 
 extension MusicScore {
-    // 动态计算项目根路径：从当前源文件开始向上查找包含 xcodeproj 的目录
+    // 动态计算项目根路径：从当前源文件开始向上查找包含 .xcodeproj 的目录
     static let projectBaseRoot: String = {
         let fileURL = URL(fileURLWithPath: #file)
         var dirURL = fileURL.deletingLastPathComponent() // .../ScoreNest/Preview Content
         let fm = FileManager.default
 
-        // 向上最多 6 层查找，遇到 ScoreNest.xcodeproj 即认为是项目根
-        for _ in 0..<6 {
-            let xcodeproj = dirURL.appendingPathComponent("ScoreNest.xcodeproj")
-            if fm.fileExists(atPath: xcodeproj.path) {
+        // 向上查找直到根目录或发现任意 .xcodeproj 目录
+        for _ in 0..<24 { // 合理上限，避免极端路径导致无限循环
+            let items = (try? fm.contentsOfDirectory(atPath: dirURL.path)) ?? []
+            if items.contains(where: { $0.hasSuffix(".xcodeproj") }) {
                 let path = dirURL.path
-                return path.hasSuffix("/") ? path + "" : path + "/"
+                return path.hasSuffix("/") ? path : path + "/"
             }
-            dirURL.deleteLastPathComponent()
+            let parent = dirURL.deletingLastPathComponent()
+            if parent.path == dirURL.path { // 已到根目录
+                break
+            }
+            dirURL = parent
         }
 
         // 回退：按常见结构返回上三级作为根 (/ScoreNest/ScoreNest/Preview Content → /ScoreNest)
@@ -23,7 +27,7 @@ extension MusicScore {
             .deletingLastPathComponent() // ScoreNest (app 源码目录)
             .deletingLastPathComponent() // 项目根目录
         let path = fallback.path
-        return path.hasSuffix("/") ? path + "" : path + "/"
+        return path.hasSuffix("/") ? path : path + "/"
     }()
     
     /// Provides an array of sample `MusicScore` instances for preview purposes.
