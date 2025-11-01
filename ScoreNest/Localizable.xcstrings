@@ -141,6 +141,17 @@
         }
       }
     },
+    "Cleanup failed: %@" : {
+      "comment" : "Image cleanup failure",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清理失败：%@"
+          }
+        }
+      }
+    },
     "Close" : {
       "localizations" : {
         "zh-Hans" : {
@@ -207,6 +218,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "删除片段"
+          }
+        }
+      }
+    },
+    "Deleted %lld unused images; failed to delete the following files:\n%@" : {
+      "comment" : "Image cleanup partial failure with file list",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已删除 %lld 个未使用图片；以下文件删除失败：\n%@"
+          }
+        }
+      }
+    },
+    "Deleted %lld unused images." : {
+      "comment" : "Image cleanup count",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已删除 %lld 个未使用图片。"
           }
         }
       }
@@ -345,50 +378,6 @@
         }
       }
     },
-    "Deleted %lld unused images." : {
-      "comment" : "Image cleanup count",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已删除 %lld 个未使用图片。"
-          }
-        }
-      }
-    },
-    "No unused images found." : {
-      "comment" : "Image cleanup none found",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未发现未使用的图片。"
-          }
-        }
-      }
-    },
-    "Deleted %lld unused images; failed to delete the following files:\n%@" : {
-      "comment" : "Image cleanup partial failure with file list",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已删除 %lld 个未使用图片；以下文件删除失败：\n%@"
-          }
-        }
-      }
-    },
-    "Cleanup failed: %@" : {
-      "comment" : "Image cleanup failure",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "清理失败：%@"
-          }
-        }
-      }
-    },
     "More Actions" : {
       "localizations" : {
         "zh-Hans" : {
@@ -415,6 +404,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "暂无片段"
+          }
+        }
+      }
+    },
+    "No unused images found." : {
+      "comment" : "Image cleanup none found",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未发现未使用的图片。"
           }
         }
       }
@@ -695,6 +695,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的乐谱"
+          }
+        }
+      }
+    },
+    "Sort by Date" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按日期排序"
+          }
+        }
+      }
+    },
+    "Sort by Title" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按标题排序"
+          }
+        }
+      }
+    },
+    "Sort Order" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排序方式"
           }
         }
       }

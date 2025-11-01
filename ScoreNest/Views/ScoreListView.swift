@@ -6,6 +6,12 @@ struct ScoreListView: View {
     @Query(sort: \MusicScore.createdAt, order: .reverse) private var scores: [MusicScore]
     @Environment(\.modelContext) private var modelContext
     
+    private enum SortOption: String, CaseIterable {
+        case dateDesc
+        case titleAsc
+    }
+
+    @State private var sortOption: SortOption = .dateDesc
     @State private var isCleaningUnusedImages: Bool = false
     @State private var isExportingAppData: Bool = false
     @State private var isImportingAppData: Bool = false
@@ -19,7 +25,7 @@ struct ScoreListView: View {
     var body: some View {
         NavigationStack {
             List {
-                ForEach(scores) { score in
+                ForEach(displayScores) { score in
                     NavigationLink(destination: ScoreView(score: score)) {
                         HStack{
                             Text(score.title)
@@ -54,12 +60,28 @@ struct ScoreListView: View {
                 .onDelete(perform: deleteScores)
             }
             .navigationTitle("Your Scores")
+            .animation(.easeInOut(duration: 0.25), value: sortOption)
             .toolbar {
+                // Primary add button as a separate, visible action
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: addNewScore) {
+                        Image(systemName: "plus")
+                            .imageScale(.large)
+                    }
+                    .accessibilityLabel("New Score")
+                    .disabled(isCleaningUnusedImages || isExportingAppData || isImportingAppData)
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
-                        Button(action: addNewScore) {
-                            Label("New Score", systemImage: "plus")
+                        // Sort options
+                        Section {
+                            Picker("Sort Order", selection: $sortOption) {
+                                Label("Sort by Date", systemImage: "calendar").tag(SortOption.dateDesc)
+                                Label("Sort by Title", systemImage: "textformat.abc").tag(SortOption.titleAsc)
+                            }
                         }
+                        Divider()
+                        
                         Button(action: cleanUnusedImages) {
                             Label("Clean Unused Images", systemImage: "trash")
                         }
@@ -114,6 +136,18 @@ struct ScoreListView: View {
         
     }
     
+    // The list to display based on the current sort option
+    private var displayScores: [MusicScore] {
+        switch sortOption {
+        case .dateDesc:
+            return scores.sorted { $0.createdAt > $1.createdAt }
+        case .titleAsc:
+            return scores.sorted { lhs, rhs in
+                lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+            }
+        }
+    }
+    
     private func addNewScore() {
         let newScore = MusicScore(title: "Untitled", pages: [])
         modelContext.insert(newScore)
@@ -127,7 +161,7 @@ struct ScoreListView: View {
     
     private func deleteScores(at offsets: IndexSet) {
         for index in offsets {
-            let score = scores[index]
+            let score = displayScores[index]
             modelContext.delete(score)
         }
         do {
