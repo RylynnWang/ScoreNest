@@ -8,14 +8,14 @@ struct AutoPlayView: View {
 
     var body: some View {
         AutoPlayScrollView(timeline: timeline, isPlaying: $isPlaying)
-            .navigationTitle("自动播放")
+            .navigationTitle("Autoplay")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { isPlaying.toggle() }) {
                         Image(systemName: isPlaying ? "pause.fill" : "play.fill")
                     }
-                    .accessibilityLabel(isPlaying ? "暂停" : "开始")
+                    .accessibilityLabel(isPlaying ? "Pause" : "Play")
                 }
             }
     }

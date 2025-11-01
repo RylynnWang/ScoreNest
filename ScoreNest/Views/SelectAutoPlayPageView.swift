@@ -21,19 +21,19 @@ struct SelectAutoPlayPageView: View {
                     Button {
                         addWholePageSegment(page)
                     } label: {
-                        Label("整页添加", systemImage: "plus.rectangle.on.rectangle")
+                        Label("Add Entire Page", systemImage: "plus.rectangle.on.rectangle")
                     }
                 }
                 .contextMenu {
                     Button {
                         addWholePageSegment(page)
                     } label: {
-                        Label("整页添加", systemImage: "plus.rectangle.on.rectangle")
+                        Label("Add Entire Page", systemImage: "plus.rectangle.on.rectangle")
                     }
                 }
             }
         }
-        .navigationTitle("选择乐谱页")
+        .navigationTitle("Select Score Page")
         // 保留系统默认返回按钮，不再自定义左上角按钮
     }
 
@@ -41,7 +41,7 @@ struct SelectAutoPlayPageView: View {
         if let timeline = score.autoPlayTimeline {
             return AnyView(CutImageForAutoPlayView(page: page, timeline: timeline))
         } else {
-            return AnyView(Text("时间线未初始化").foregroundStyle(.secondary))
+            return AnyView(Text("Timeline not initialized").foregroundStyle(.secondary))
         }
     }
 

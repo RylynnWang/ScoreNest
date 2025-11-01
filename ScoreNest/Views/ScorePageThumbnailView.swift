@@ -12,7 +12,7 @@ struct ScorePageThumbnailView: View {
                 .cornerRadius(6)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("第 \(page.pageNumber) 页")
+                Text("Page \(page.pageNumber)")
                     .font(.headline)
                 if let note = page.note, !note.isEmpty {
                     Text(note)

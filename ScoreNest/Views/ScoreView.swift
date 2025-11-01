@@ -19,20 +19,20 @@ struct ScoreView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     NavigationLink(destination: EditScoreView(score: score)) {
-                        Label("编辑乐谱", systemImage: "pencil")
+                        Label("Edit Score", systemImage: "pencil")
                     }
                     NavigationLink(destination: EditAutoPlayView(score: score)) {
-                        Label("编辑自动播放", systemImage: "gearshape")
+                        Label("Edit Autoplay", systemImage: "gearshape")
                     }
                     if let tl = score.autoPlayTimeline {
                         NavigationLink(destination: AutoPlayView(timeline: tl)) {
-                            Label("开始自动播放", systemImage: "play.circle")
+                            Label("Start Autoplay", systemImage: "play.circle")
                         }
                     } else {
                         Button {
                             showAutoPlayAlert = true
                         } label: {
-                            Label("开始自动播放", systemImage: "play.circle")
+                            Label("Start Autoplay", systemImage: "play.circle")
                         }
                     }
                 } label: {
@@ -40,8 +40,8 @@ struct ScoreView: View {
                 }
             }
         }
-        .alert("请先编辑自动播放", isPresented: $showAutoPlayAlert) {
-            Button("好的") {}
+        .alert("Please edit autoplay first", isPresented: $showAutoPlayAlert) {
+            Button("OK") {}
         }
     }
 }

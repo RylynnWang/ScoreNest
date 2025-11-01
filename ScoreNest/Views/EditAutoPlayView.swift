@@ -17,9 +17,9 @@ struct EditAutoPlayView: View {
     
     var body: some View {
         Form {
-            Section(header: Text("基础设置")) {
+            Section(header: Text("Basic Settings")) {
                 HStack {
-                    Text("总时长（秒）")
+                    Text("Total Duration (seconds)")
                     Spacer()
                     TextField("60", value: $baseDuration, format: .number)
                         .keyboardType(.decimalPad)
@@ -27,7 +27,7 @@ struct EditAutoPlayView: View {
                         .frame(maxWidth: 120)
                 }
                 HStack {
-                    Text("统一宽度")
+                    Text("Uniform Width")
                     Spacer()
                     Slider(value: $widthRatio, in: 0.3...1.3, step: 0.01)
                         .frame(maxWidth: 200)
@@ -41,11 +41,11 @@ struct EditAutoPlayView: View {
                 }
             }
             
-            Section(header: Text("片段列表")) {
+            Section(header: Text("Segments")) {
                 if let t = score.autoPlayTimeline {
                     let ordered = t.segments.sorted { $0.order < $1.order }
                     if ordered.isEmpty {
-                        Text("暂无片段")
+                        Text("No segments")
                             .foregroundStyle(.secondary)
                     } else {
                         if let mode = actionMode, let src = sourceSegment(for: mode) {
@@ -54,18 +54,18 @@ struct EditAutoPlayView: View {
                                     .font(.callout)
                                     .foregroundStyle(.blue)
                                 Spacer()
-                                Button("取消选择") { actionMode = nil }
+                                Button("Cancel Selection") { actionMode = nil }
                                     .buttonStyle(.borderless)
                             }
                         }
                         ForEach(ordered) { seg in
                             HStack(spacing: 12) {
-                                Text("段 \(seg.order)")
+                                Text("Segment \(seg.order)")
                                     .font(.headline)
                                 Spacer()
-                                Text("页: \(seg.sourcePage?.pageNumber ?? seg.order)")
+                                Text("Page: \(seg.sourcePage?.pageNumber ?? seg.order)")
                                     .foregroundStyle(.secondary)
-                                Text(String(format: "速度×%.2f", seg.speedFactor))
+                                Text(String(format: "Speed ×%.2f", seg.speedFactor))
                                     .foregroundStyle(.secondary)
                             }
                             .contentShape(Rectangle())
@@ -74,64 +74,64 @@ struct EditAutoPlayView: View {
                                 Button {
                                     previewSegment = seg
                                 } label: {
-                                    Label("预览片段", systemImage: "eye")
+                                    Label("Preview Segment", systemImage: "eye")
                                 }
                                 Button {
                                     actionMode = .swap(sourceID: seg.id)
                                 } label: {
-                                    Label("交换片段", systemImage: "arrow.left.arrow.right")
+                                    Label("Swap Segment", systemImage: "arrow.left.arrow.right")
                                 }
                                 Button {
                                     actionMode = .moveBefore(sourceID: seg.id)
                                 } label: {
-                                    Label("调整顺序", systemImage: "arrow.up.to.line")
+                                    Label("Reorder", systemImage: "arrow.up.to.line")
                                 }
                                 Button {
                                     presentSpeedAdjust(for: seg)
                                 } label: {
-                                    Label("调整速度修正", systemImage: "speedometer")
+                                    Label("Adjust Speed Factor", systemImage: "speedometer")
                                 }
                                 Button(role: .destructive) {
                                     deleteSegment(seg)
                                 } label: {
-                                    Label("删除片段", systemImage: "trash")
+                                    Label("Delete Segment", systemImage: "trash")
                                 }
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
                                     deleteSegment(seg)
                                 } label: {
-                                    Label("删除", systemImage: "trash")
+                                    Label("Delete", systemImage: "trash")
                                 }
                             }
                         }
                         .onDelete(perform: deleteSegments)
                     }
                 } else {
-                    Text("暂无时间线")
+                    Text("Timeline not initialized")
                         .foregroundStyle(.secondary)
                 }
             }
 
-            Section(header: Text("添加片段")) {
+            Section(header: Text("Add Segment")) {
                 if score.autoPlayTimeline != nil {
                     NavigationLink(destination: SelectAutoPlayPageView(score: score)) {
-                        Label("选择乐谱页添加片段", systemImage: "plus.square.on.square")
+                        Label("Add segment from score page", systemImage: "plus.square.on.square")
                     }
                 } else {
-                    Text("时间线未初始化")
+                    Text("Timeline not initialized")
                         .foregroundStyle(.secondary)
                 }
             }
         }
-        .navigationTitle("编辑自动播放")
+        .navigationTitle("Edit Autoplay")
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("返回") { dismiss() }
+                Button("Back") { dismiss() }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("保存") {
+                Button("Save") {
                     saveEdits()
                     dismiss()
                 }
@@ -145,9 +145,9 @@ struct EditAutoPlayView: View {
         .sheet(item: $editingSegment) { seg in
             NavigationView {
                 Form {
-                    Section(header: Text("速度修正")) {
+                    Section(header: Text("Speed Adjustment")) {
                         HStack {
-                            Text("速度×")
+                            Text("Speed ×")
                             Spacer()
                             Slider(value: $editingSpeedFactor, in: 0.3...2.0, step: 0.01)
                                 .frame(maxWidth: 220)
@@ -156,18 +156,18 @@ struct EditAutoPlayView: View {
                                 .foregroundStyle(.secondary)
                                 .frame(width: 44, alignment: .trailing)
                         }
-                        Text("提示：>1 加快，<1 减慢")
+                        Text("Tip: >1 faster, <1 slower")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
-                .navigationTitle("调整速度修正")
+                .navigationTitle("Adjust Speed Factor")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("取消") { editingSegment = nil }
+                        Button("Cancel") { editingSegment = nil }
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("保存") {
+                        Button("Save") {
                             applySpeedAdjustment(to: seg, factor: editingSpeedFactor)
                             editingSegment = nil
                         }
@@ -179,10 +179,10 @@ struct EditAutoPlayView: View {
         .sheet(item: $previewSegment) { seg in
             NavigationView {
                 SegmentCroppedPreviewView(segment: seg)
-                    .navigationTitle("片段预览")
+                    .navigationTitle("Segment Preview")
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
-                            Button("关闭") { previewSegment = nil }
+                            Button("Close") { previewSegment = nil }
                         }
                     }
             }
@@ -255,9 +255,9 @@ struct EditAutoPlayView: View {
     private func instructionText(for mode: SegmentActionMode, source: AutoPlaySegment) -> String {
         switch mode {
         case .swap:
-            return "选择目标片段，与第 \(source.order) 段交换"
+            return "Select target segment to swap with segment \(source.order)"
         case .moveBefore:
-            return "选择目标片段，把第 \(source.order) 段放到其前面"
+            return "Select target segment to move segment \(source.order) before it"
         }
     }
 
@@ -384,7 +384,7 @@ private struct SegmentCroppedPreviewView: View {
                     Image(systemName: "photo")
                         .font(.title2)
                         .foregroundStyle(.secondary)
-                    Text("无法加载片段图片")
+                    Text("Unable to load segment image")
                         .foregroundStyle(.secondary)
                 }
             }

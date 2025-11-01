@@ -27,7 +27,7 @@ struct ScorePageView: View {
                 .cornerRadius(8)
             }
 
-            Text("第 \(page.pageNumber) 页")
+            Text("Page \(page.pageNumber)")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }

@@ -18,7 +18,7 @@ struct CutImageForAutoPlayView: View {
         VStack(spacing: 0) {
             // Top control section: speed and current crop spec
             Form {
-                Section(header: Text("速度修正")) {
+                Section(header: Text("Speed Adjustment")) {
                     HStack {
                         Slider(value: $speedFactor, in: 0.5...2.0, step: 0.01)
                         Text(String(format: "%.2f", speedFactor))
@@ -27,7 +27,7 @@ struct CutImageForAutoPlayView: View {
                             .frame(width: 44, alignment: .trailing)
                     }
                     HStack {
-                        Text("裁剪矩形")
+                        Text("Crop Rect")
                         Spacer()
                         Text(String(format: "x=%.2f y=%.2f w=%.2f h=%.2f", cropSpec.x, cropSpec.y, cropSpec.width, cropSpec.height))
                             .font(.caption)
@@ -64,22 +64,22 @@ struct CutImageForAutoPlayView: View {
                             Image(systemName: "photo")
                                 .font(.title2)
                                 .foregroundStyle(.secondary)
-                            Text("无法加载图片")
+                            Text("Unable to load image")
                                 .foregroundStyle(.secondary)
                         }
                     }
                 }
             }
         }
-        .navigationTitle("裁剪片段")
+        .navigationTitle("Crop Segment")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("取消") { dismiss() }
+                Button("Cancel") { dismiss() }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("确认") {
+                Button("Confirm") {
                     saveSegment()
                     dismiss()
                 }

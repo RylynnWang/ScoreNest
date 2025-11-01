@@ -21,13 +21,13 @@ struct EditScoreView: View {
 
     var body: some View {
         Form {
-            Section(header: Text("乐谱标题")) {
-                TextField("请输入乐谱标题", text: $title)
+            Section(header: Text("Score Title")) {
+                TextField("Enter score title", text: $title)
                     .textInputAutocapitalization(.sentences)
                     .disableAutocorrection(false)
             }
-            Section(header: Text("乐谱页面")) {
-                Text("当前乐谱页面数量: \(pages.count)")
+            Section(header: Text("Score Pages")) {
+                Text("Current page count: \(pages.count)")
                     .foregroundStyle(.secondary)
                 
                 if let mode = actionMode, let src = sourcePage(for: mode) {
@@ -36,7 +36,7 @@ struct EditScoreView: View {
                             .font(.callout)
                             .foregroundStyle(.blue)
                         Spacer()
-                        Button("取消选择") { actionMode = nil }
+                        Button("Cancel Selection") { actionMode = nil }
                             .buttonStyle(.borderless)
                     }
                 }
@@ -49,24 +49,24 @@ struct EditScoreView: View {
                             Button(role: .destructive) {
                                 deletePageLocally(page)
                             } label: {
-                                Label("删除", systemImage: "trash")
+                                Label("Delete", systemImage: "trash")
                             }
                         }
                         .contextMenu {
                             Button {
                                 actionMode = .swap(sourceID: page.id)
                             } label: {
-                                Label("交换页面", systemImage: "arrow.left.arrow.right")
+                                Label("Swap Pages", systemImage: "arrow.left.arrow.right")
                             }
                             Button {
                                 actionMode = .moveBefore(sourceID: page.id)
                             } label: {
-                                Label("调整顺序", systemImage: "arrow.up.to.line")
+                                Label("Reorder", systemImage: "arrow.up.to.line")
                             }
                             Button(role: .destructive) {
                                 deletePageLocally(page)
                             } label: {
-                                Label("删除", systemImage: "trash")
+                                Label("Delete", systemImage: "trash")
                             }
                         }
                 }
@@ -76,19 +76,19 @@ struct EditScoreView: View {
                     maxSelectionCount: 20,
                     matching: .images
                 ) {
-                    Label("添加图片", systemImage: "photo.on.rectangle.angled")
+                    Label("Add Images", systemImage: "photo.on.rectangle.angled")
                 }
                 .buttonStyle(.borderless)
             }
         }
-        .navigationTitle("编辑乐谱")
+        .navigationTitle("Edit Score")
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("取消") { dismiss() }
+                Button("Cancel") { dismiss() }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("确定") {
+                Button("Save") {
                     do {
                         try saveEdits()
                         dismiss()
@@ -163,9 +163,9 @@ struct EditScoreView: View {
     private func instructionText(for mode: ActionMode, source: ScorePage) -> String {
         switch mode {
         case .swap:
-            return "选择目标页面，与第 \(source.pageNumber) 页交换"
+            return "Select a target page to swap with page \(source.pageNumber)"
         case .moveBefore:
-            return "选择目标页面，把第 \(source.pageNumber) 页放到其前面"
+            return "Select a target page to move page \(source.pageNumber) before it"
         }
     }
     

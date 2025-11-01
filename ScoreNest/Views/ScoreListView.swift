@@ -33,34 +33,34 @@ struct ScoreListView: View {
                         Button(role: .destructive) {
                             deleteScore(score)
                         } label: {
-                            Label("删除", systemImage: "trash")
+                            Label("Delete", systemImage: "trash")
                         }
                     }
                     .contextMenu {
                         Button(role: .destructive) {
                             deleteScore(score)
                         } label: {
-                            Label("删除", systemImage: "trash")
+                            Label("Delete", systemImage: "trash")
                         }
                     }
                 }
                 .onDelete(perform: deleteScores)
             }
-            .navigationTitle("乐谱")
+            .navigationTitle("Your Scores")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button(action: addNewScore) {
-                            Label("新建乐谱", systemImage: "plus")
+                            Label("New Score", systemImage: "plus")
                         }
                         Button(action: cleanUnusedImages) {
-                            Label("清除未使用图片", systemImage: "trash")
+                            Label("Clean Unused Images", systemImage: "trash")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                             .imageScale(.large)
                     }
-                    .accessibilityLabel("更多操作")
+                    .accessibilityLabel("More Actions")
                     .disabled(isCleaningUnusedImages)
                 }
             }
@@ -71,7 +71,7 @@ struct ScoreListView: View {
                         Color.black.opacity(0.06).ignoresSafeArea()
                         VStack(spacing: 12) {
                             ProgressView()
-                            Text("正在清理未使用图片…")
+                            Text("Cleaning unused images…")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
@@ -81,8 +81,8 @@ struct ScoreListView: View {
                     }
                 }
             }
-            .alert("清理完成", isPresented: $showCleanupResult) {
-                Button("确定", role: .cancel) {}
+            .alert("Cleanup Complete", isPresented: $showCleanupResult) {
+                Button("OK", role: .cancel) {}
             } message: {
                 Text(cleanupResultMessage)
             }
@@ -169,15 +169,15 @@ struct ScoreListView: View {
 
                 await MainActor.run {
                     if failedFiles.isEmpty {
-                        cleanupResultMessage = deletedCount > 0 ? "已删除 \(deletedCount) 张未使用图片。" : "没有发现未使用图片。"
+                        cleanupResultMessage = deletedCount > 0 ? "Deleted \(deletedCount) unused images." : "No unused images found."
                     } else {
-                        cleanupResultMessage = "已删除 \(deletedCount) 张未使用图片，以下文件删除失败：\n" + failedFiles.joined(separator: "\n")
+                        cleanupResultMessage = "Deleted \(deletedCount) unused images; failed to delete the following files:\n" + failedFiles.joined(separator: "\n")
                     }
                     showCleanupResult = true
                 }
             } catch {
                 await MainActor.run {
-                    cleanupResultMessage = "清理失败：" + error.localizedDescription
+                    cleanupResultMessage = "Cleanup failed: " + error.localizedDescription
                     showCleanupResult = true
                 }
             }
