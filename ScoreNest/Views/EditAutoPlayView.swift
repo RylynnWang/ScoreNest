@@ -60,6 +60,17 @@ struct EditAutoPlayView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Section(header: Text("添加片段")) {
+                if score.autoPlayTimeline != nil {
+                    NavigationLink(destination: SelectAutoPlayPageView(score: score)) {
+                        Label("选择乐谱页添加片段", systemImage: "plus.square.on.square")
+                    }
+                } else {
+                    Text("时间线未初始化")
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .navigationTitle("编辑自动播放")
         .navigationBarBackButtonHidden(true)
