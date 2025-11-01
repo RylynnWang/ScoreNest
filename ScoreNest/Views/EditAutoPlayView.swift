@@ -11,6 +11,7 @@ struct EditAutoPlayView: View {
     @State private var widthRatio: Double = 1.0
     @State private var editingSegment: AutoPlaySegment?
     @State private var editingSpeedFactor: Double = 1.0
+    @State private var actionMode: SegmentActionMode? = nil
     
     var body: some View {
         Form {
@@ -45,6 +46,16 @@ struct EditAutoPlayView: View {
                         Text("暂无片段")
                             .foregroundStyle(.secondary)
                     } else {
+                        if let mode = actionMode, let src = sourceSegment(for: mode) {
+                            HStack {
+                                Text(instructionText(for: mode, source: src))
+                                    .font(.callout)
+                                    .foregroundStyle(.blue)
+                                Spacer()
+                                Button("取消选择") { actionMode = nil }
+                                    .buttonStyle(.borderless)
+                            }
+                        }
                         ForEach(ordered) { seg in
                             HStack(spacing: 12) {
                                 Text("段 \(seg.order)")
@@ -55,7 +66,19 @@ struct EditAutoPlayView: View {
                                 Text(String(format: "速度×%.2f", seg.speedFactor))
                                     .foregroundStyle(.secondary)
                             }
+                            .contentShape(Rectangle())
+                            .onTapGesture { handleTapOnSegment(seg) }
                             .contextMenu {
+                                Button {
+                                    actionMode = .swap(sourceID: seg.id)
+                                } label: {
+                                    Label("交换片段", systemImage: "arrow.left.arrow.right")
+                                }
+                                Button {
+                                    actionMode = .moveBefore(sourceID: seg.id)
+                                } label: {
+                                    Label("调整顺序", systemImage: "arrow.up.to.line")
+                                }
                                 Button {
                                     presentSpeedAdjust(for: seg)
                                 } label: {
@@ -101,7 +124,7 @@ struct EditAutoPlayView: View {
                 Button("返回") { dismiss() }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("保存基础设置") {
+                Button("保存") {
                     saveEdits()
                     dismiss()
                 }
@@ -164,6 +187,7 @@ struct EditAutoPlayView: View {
         // Remove from persistent store and relationship
         modelContext.delete(segment)
         timeline.segments.removeAll { $0.id == segment.id }
+        if let mode = actionMode, isSource(segment: segment, of: mode) { actionMode = nil }
         // Normalize order to be continuous starting from 1
         let remaining = timeline.segments.sorted { $0.order < $1.order }
         for (idx, seg) in remaining.enumerated() {
@@ -187,6 +211,83 @@ struct EditAutoPlayView: View {
         do {
             try modelContext.save()
             print("🔧 EditAutoPlayView: Speed adjusted for segment order \(segment.order) to factor \(factor)")
+        } catch {
+            print("保存失败: \(error)")
+        }
+    }
+
+    // MARK: - 交换 / 移动
+    private enum SegmentActionMode { case swap(sourceID: UUID), moveBefore(sourceID: UUID) }
+
+    private func sourceSegment(for mode: SegmentActionMode) -> AutoPlaySegment? {
+        guard let timeline = score.autoPlayTimeline else { return nil }
+        switch mode {
+        case .swap(let id), .moveBefore(let id):
+            return timeline.segments.first(where: { $0.id == id })
+        }
+    }
+
+    private func isSource(segment: AutoPlaySegment, of mode: SegmentActionMode) -> Bool {
+        switch mode {
+        case .swap(let id), .moveBefore(let id):
+            return segment.id == id
+        }
+    }
+
+    private func instructionText(for mode: SegmentActionMode, source: AutoPlaySegment) -> String {
+        switch mode {
+        case .swap:
+            return "选择目标片段，与第 \(source.order) 段交换"
+        case .moveBefore:
+            return "选择目标片段，把第 \(source.order) 段放到其前面"
+        }
+    }
+
+    private func handleTapOnSegment(_ target: AutoPlaySegment) {
+        guard let mode = actionMode, let source = sourceSegment(for: mode) else { return }
+        guard source.id != target.id else { return }
+        withAnimation {
+            switch mode {
+            case .swap:
+                swapSegments(sourceID: source.id, targetID: target.id)
+            case .moveBefore:
+                moveSegmentBefore(sourceID: source.id, targetID: target.id)
+            }
+        }
+    }
+
+    private func swapSegments(sourceID: UUID, targetID: UUID) {
+        guard let timeline = score.autoPlayTimeline else { return }
+        var ordered = timeline.segments.sorted { $0.order < $1.order }
+        guard let i = ordered.firstIndex(where: { $0.id == sourceID }),
+              let j = ordered.firstIndex(where: { $0.id == targetID }) else { return }
+        ordered.swapAt(i, j)
+        for (idx, seg) in ordered.enumerated() { seg.order = idx + 1 }
+        timeline.segments = ordered
+        actionMode = nil
+        do {
+            try modelContext.save()
+            print("🔧 EditAutoPlayView: Swapped segments at indices \(i) and \(j)")
+        } catch {
+            print("保存失败: \(error)")
+        }
+    }
+
+    private func moveSegmentBefore(sourceID: UUID, targetID: UUID) {
+        guard let timeline = score.autoPlayTimeline else { return }
+        var ordered = timeline.segments.sorted { $0.order < $1.order }
+        guard let from = ordered.firstIndex(where: { $0.id == sourceID }),
+              let toOriginal = ordered.firstIndex(where: { $0.id == targetID }) else { return }
+        let moving = ordered.remove(at: from)
+        var to = toOriginal
+        if from < to { to -= 1 }
+        ordered.insert(moving, at: to)
+        for (idx, seg) in ordered.enumerated() { seg.order = idx + 1 }
+        timeline.segments = ordered
+        actionMode = nil
+        do {
+            try modelContext.save()
+            print("🔧 EditAutoPlayView: Moved segment from index \(from) to before index \(toOriginal)")
         } catch {
             print("保存失败: \(error)")
         }
