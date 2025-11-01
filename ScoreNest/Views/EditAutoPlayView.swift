@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct EditAutoPlayView: View {
     let score: MusicScore
@@ -12,6 +13,7 @@ struct EditAutoPlayView: View {
     @State private var editingSegment: AutoPlaySegment?
     @State private var editingSpeedFactor: Double = 1.0
     @State private var actionMode: SegmentActionMode? = nil
+    @State private var previewSegment: AutoPlaySegment? = nil
     
     var body: some View {
         Form {
@@ -69,6 +71,11 @@ struct EditAutoPlayView: View {
                             .contentShape(Rectangle())
                             .onTapGesture { handleTapOnSegment(seg) }
                             .contextMenu {
+                                Button {
+                                    previewSegment = seg
+                                } label: {
+                                    Label("预览片段", systemImage: "eye")
+                                }
                                 Button {
                                     actionMode = .swap(sourceID: seg.id)
                                 } label: {
@@ -167,6 +174,17 @@ struct EditAutoPlayView: View {
                         .tint(.blue)
                     }
                 }
+            }
+        }
+        .sheet(item: $previewSegment) { seg in
+            NavigationView {
+                SegmentCroppedPreviewView(segment: seg)
+                    .navigationTitle("片段预览")
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("关闭") { previewSegment = nil }
+                        }
+                    }
             }
         }
     }
@@ -340,5 +358,64 @@ struct EditAutoPlayView: View {
         } catch {
             print("保存失败: \(error)")
         }
+    }
+}
+
+// MARK: - 片段裁剪预览视图
+private struct SegmentCroppedPreviewView: View {
+    let segment: AutoPlaySegment
+
+    var body: some View {
+        Group {
+            if let page = segment.sourcePage, let uiImage = loadUIImage(named: page.imageFileName) {
+                let cropped = crop(image: uiImage, with: segment.cropRectNormalized)
+                GeometryReader { geo in
+                    ZStack {
+                        Color.black.opacity(0.03).ignoresSafeArea()
+                        Image(uiImage: cropped)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .position(x: geo.size.width / 2, y: geo.size.height / 2)
+                    }
+                }
+            } else {
+                VStack(spacing: 8) {
+                    Image(systemName: "photo")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                    Text("无法加载片段图片")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private func loadUIImage(named: String) -> UIImage? {
+        if let img = UIImage(named: named) { return img }
+        if FileManager.default.fileExists(atPath: named) { return UIImage(contentsOfFile: named) }
+        if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+            let direct = appSupport.appendingPathComponent(named)
+            if FileManager.default.fileExists(atPath: direct.path) { return UIImage(contentsOfFile: direct.path) }
+            let nested = appSupport
+                .appendingPathComponent("ScoreNestImages", isDirectory: true)
+                .appendingPathComponent(named)
+            if FileManager.default.fileExists(atPath: nested.path) { return UIImage(contentsOfFile: nested.path) }
+        }
+        return nil
+    }
+
+    private func crop(image: UIImage, with spec: RectSpec?) -> UIImage {
+        guard let spec = spec, let cg = image.cgImage else { return image }
+        let w = CGFloat(cg.width)
+        let h = CGFloat(cg.height)
+        let rect = CGRect(
+            x: max(0, CGFloat(spec.x) * w),
+            y: max(0, CGFloat(spec.y) * h),
+            width: max(0, CGFloat(spec.width) * w),
+            height: max(0, CGFloat(spec.height) * h)
+        )
+        guard let cropped = cg.cropping(to: rect) else { return image }
+        return UIImage(cgImage: cropped, scale: image.scale, orientation: image.imageOrientation)
     }
 }

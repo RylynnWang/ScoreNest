@@ -13,8 +13,16 @@ struct ScoreListView: View {
                         HStack{
                             Text(score.title)
                             Spacer()
-                            Text("\(score.createdAt)")
-                                .font(.footnote)
+                            Text(score.createdAt, format: .dateTime
+                                .year()
+                                .month(.defaultDigits)
+                                .day()
+                                .hour(.twoDigits(amPM: .omitted))
+                                .minute(.twoDigits)
+                                .second(.twoDigits)
+                            )
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
