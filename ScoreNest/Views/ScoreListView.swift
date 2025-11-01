@@ -1,13 +1,20 @@
 import SwiftUI
 import SwiftData
+import Foundation
 
 struct ScoreListView: View {
     @Query(sort: \MusicScore.createdAt, order: .reverse) private var scores: [MusicScore]
     @Environment(\.modelContext) private var modelContext
     
     @State private var isCleaningUnusedImages: Bool = false
+    @State private var isExportingAppData: Bool = false
+    @State private var isImportingAppData: Bool = false
     @State private var showCleanupResult: Bool = false
     @State private var cleanupResultMessage: String = ""
+    @State private var showExportResult: Bool = false
+    @State private var exportResultMessage: String = ""
+    @State private var showImportResult: Bool = false
+    @State private var importResultMessage: String = ""
 
     var body: some View {
         NavigationStack {
@@ -56,22 +63,29 @@ struct ScoreListView: View {
                         Button(action: cleanUnusedImages) {
                             Label("Clean Unused Images", systemImage: "trash")
                         }
+                        Divider()
+                        Button(action: exportAppData) {
+                            Label("Export Data", systemImage: "square.and.arrow.up")
+                        }
+                        Button(action: importAppData) {
+                            Label("Import Data", systemImage: "square.and.arrow.down")
+                        }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                             .imageScale(.large)
                     }
                     .accessibilityLabel("More Actions")
-                    .disabled(isCleaningUnusedImages)
+                    .disabled(isCleaningUnusedImages || isExportingAppData || isImportingAppData)
                 }
             }
-            .disabled(isCleaningUnusedImages)
+            .disabled(isCleaningUnusedImages || isExportingAppData || isImportingAppData)
             .overlay {
-                if isCleaningUnusedImages {
+                if isCleaningUnusedImages || isExportingAppData || isImportingAppData {
                     ZStack {
                         Color.black.opacity(0.06).ignoresSafeArea()
                         VStack(spacing: 12) {
                             ProgressView()
-                            Text("Cleaning unused images…")
+                            Text(isCleaningUnusedImages ? "Cleaning unused images…" : (isExportingAppData ? "Exporting data…" : "Importing data…"))
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
@@ -85,6 +99,16 @@ struct ScoreListView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(cleanupResultMessage)
+            }
+            .alert("Export Complete", isPresented: $showExportResult) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(exportResultMessage)
+            }
+            .alert("Import Complete", isPresented: $showImportResult) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(importResultMessage)
             }
         }
         
@@ -169,15 +193,27 @@ struct ScoreListView: View {
 
                 await MainActor.run {
                     if failedFiles.isEmpty {
-                        cleanupResultMessage = deletedCount > 0 ? "Deleted \(deletedCount) unused images." : "No unused images found."
+                        cleanupResultMessage = deletedCount > 0
+                        ? String(
+                            format: NSLocalizedString("Deleted %lld unused images.", comment: "Image cleanup count"),
+                            Int64(deletedCount)
+                          )
+                        : String(localized: "No unused images found.")
                     } else {
-                        cleanupResultMessage = "Deleted \(deletedCount) unused images; failed to delete the following files:\n" + failedFiles.joined(separator: "\n")
+                        let fileList = failedFiles.joined(separator: "\n")
+                        cleanupResultMessage = String(
+                            format: NSLocalizedString("Deleted %lld unused images; failed to delete the following files:\n%@", comment: "Image cleanup partial failure with file list"),
+                            Int64(deletedCount), fileList
+                        )
                     }
                     showCleanupResult = true
                 }
             } catch {
                 await MainActor.run {
-                    cleanupResultMessage = "Cleanup failed: " + error.localizedDescription
+                    cleanupResultMessage = String(
+                        format: NSLocalizedString("Cleanup failed: %@", comment: "Image cleanup failure"),
+                        error.localizedDescription
+                    )
                     showCleanupResult = true
                 }
             }
@@ -185,6 +221,70 @@ struct ScoreListView: View {
             await MainActor.run {
                 isCleaningUnusedImages = false
             }
+        }
+    }
+
+    // MARK: - Export / Import
+    private func exportAppData() {
+        guard !isExportingAppData else { return }
+        isExportingAppData = true
+        Task {
+            do {
+                let result = try AppDataIO.exportAll(toDocumentsWithName: "scores.appdata", modelContext: modelContext)
+                switch result {
+                case .success(let packageURL):
+                    await MainActor.run {
+                        exportResultMessage = String(
+                            format: NSLocalizedString("Exported to %@ in Documents.", comment: "Export success message with file name"),
+                            packageURL.lastPathComponent
+                        )
+                        showExportResult = true
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    exportResultMessage = String(
+                        format: NSLocalizedString("Export failed: %@", comment: "Export failure with error description"),
+                        error.localizedDescription
+                    )
+                    showExportResult = true
+                }
+            }
+            await MainActor.run { isExportingAppData = false }
+        }
+    }
+
+    private func importAppData() {
+        guard !isImportingAppData else { return }
+        isImportingAppData = true
+        Task {
+            do {
+                let fm = FileManager.default
+                guard let documents = fm.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                    throw NSError(domain: "ScoreNest", code: 3001, userInfo: [NSLocalizedDescriptionKey: "无法定位 Documents 目录"]) 
+                }
+                let packageURL = documents.appendingPathComponent("scores.appdata", isDirectory: true)
+                let result = try AppDataIO.importFromPackage(at: packageURL, modelContext: modelContext)
+                switch result {
+                case .success(let importedScores, let importedPages, let importedSegments):
+                    await MainActor.run {
+                        importResultMessage = String(
+                            format: NSLocalizedString("Imported %lld scores, %lld pages, %lld segments.", comment: "Import success counts"),
+                            importedScores, importedPages, importedSegments
+                        )
+                        showImportResult = true
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    importResultMessage = String(
+                        format: NSLocalizedString("Import failed: %@", comment: "Import failure with error description"),
+                        error.localizedDescription
+                    )
+                    showImportResult = true
+                }
+            }
+            await MainActor.run { isImportingAppData = false }
         }
     }
 }
