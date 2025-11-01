@@ -9,6 +9,8 @@ struct EditAutoPlayView: View {
 
     @State private var baseDuration: Double = 60.0
     @State private var widthRatio: Double = 1.0
+    @State private var editingSegment: AutoPlaySegment?
+    @State private var editingSpeedFactor: Double = 1.0
     
     var body: some View {
         Form {
@@ -53,7 +55,27 @@ struct EditAutoPlayView: View {
                                 Text(String(format: "速度×%.2f", seg.speedFactor))
                                     .foregroundStyle(.secondary)
                             }
+                            .contextMenu {
+                                Button {
+                                    presentSpeedAdjust(for: seg)
+                                } label: {
+                                    Label("调整速度修正", systemImage: "speedometer")
+                                }
+                                Button(role: .destructive) {
+                                    deleteSegment(seg)
+                                } label: {
+                                    Label("删除片段", systemImage: "trash")
+                                }
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    deleteSegment(seg)
+                                } label: {
+                                    Label("删除", systemImage: "trash")
+                                }
+                            }
                         }
+                        .onDelete(perform: deleteSegments)
                     }
                 } else {
                     Text("暂无时间线")
@@ -79,7 +101,7 @@ struct EditAutoPlayView: View {
                 Button("返回") { dismiss() }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("保存") {
+                Button("保存基础设置") {
                     saveEdits()
                     dismiss()
                 }
@@ -89,6 +111,84 @@ struct EditAutoPlayView: View {
         .onAppear {
             ensureDefaultTimelineIfNeeded()
             initializeStateFromTimeline()
+        }
+        .sheet(item: $editingSegment) { seg in
+            NavigationView {
+                Form {
+                    Section(header: Text("速度修正")) {
+                        HStack {
+                            Text("速度×")
+                            Spacer()
+                            Slider(value: $editingSpeedFactor, in: 0.3...2.0, step: 0.01)
+                                .frame(maxWidth: 220)
+                            Text(String(format: "%.2f", editingSpeedFactor))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 44, alignment: .trailing)
+                        }
+                        Text("提示：>1 加快，<1 减慢")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .navigationTitle("调整速度修正")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("取消") { editingSegment = nil }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("保存") {
+                            applySpeedAdjustment(to: seg, factor: editingSpeedFactor)
+                            editingSegment = nil
+                        }
+                        .tint(.blue)
+                    }
+                }
+            }
+        }
+    }
+
+    private func deleteSegments(at offsets: IndexSet) {
+        guard let timeline = score.autoPlayTimeline else { return }
+        let ordered = timeline.segments.sorted { $0.order < $1.order }
+        for index in offsets {
+            if index >= 0 && index < ordered.count {
+                let segment = ordered[index]
+                deleteSegment(segment)
+            }
+        }
+    }
+
+    private func deleteSegment(_ segment: AutoPlaySegment) {
+        guard let timeline = score.autoPlayTimeline else { return }
+        // Remove from persistent store and relationship
+        modelContext.delete(segment)
+        timeline.segments.removeAll { $0.id == segment.id }
+        // Normalize order to be continuous starting from 1
+        let remaining = timeline.segments.sorted { $0.order < $1.order }
+        for (idx, seg) in remaining.enumerated() {
+            seg.order = idx + 1
+        }
+        do {
+            try modelContext.save()
+        } catch {
+            print("删除失败: \(error)")
+        }
+    }
+
+    private func presentSpeedAdjust(for segment: AutoPlaySegment) {
+        editingSpeedFactor = segment.speedFactor
+        editingSegment = segment
+        print("🔧 EditAutoPlayView: Presenting speed adjust for segment order \(segment.order) with current factor \(segment.speedFactor)")
+    }
+
+    private func applySpeedAdjustment(to segment: AutoPlaySegment, factor: Double) {
+        segment.speedFactor = factor
+        do {
+            try modelContext.save()
+            print("🔧 EditAutoPlayView: Speed adjusted for segment order \(segment.order) to factor \(factor)")
+        } catch {
+            print("保存失败: \(error)")
         }
     }
 
