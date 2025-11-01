@@ -10,7 +10,7 @@ final class ScorePage:Identifiable {
     
     var score: MusicScore?
     
-    init(id: UUID = UUID(), imageFileName: String, pageNumber: Int, note: String? = nil, score: MusicScore? = nil) {
+    init(id: UUID = UUID(), imageFileName: String = "Unnamed", pageNumber: Int = 1, note: String? = nil, score: MusicScore? = nil) {
         self.id = id
         self.imageFileName = imageFileName
         self.pageNumber = pageNumber

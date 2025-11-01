@@ -26,7 +26,7 @@ final class AutoPlaySegment: Identifiable {
         sourcePage: ScorePage? = nil,
         cropRectNormalized: RectSpec? = nil,
         speedFactor: Double = 1.0,
-        order: Int,
+        order: Int = 1,
         timeline: AutoPlayTimeline? = nil
     ) {
         self.id = id

@@ -14,7 +14,7 @@ final class MusicScore:Identifiable {
     @Relationship(deleteRule: .cascade, inverse: \AutoPlayTimeline.score)
     var autoPlayTimeline: AutoPlayTimeline? = nil
     
-    init(id: UUID = UUID(), title: String = "Untitled Score", createdAt: Date = Date(), pages: [ScorePage]) {
+    init(id: UUID = UUID(), title: String = "Untitled Score", createdAt: Date = Date(), pages: [ScorePage] = []) {
         self.id = id
         self.title = title
         self.createdAt = createdAt

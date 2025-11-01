@@ -8,7 +8,7 @@ struct RectSpec: Codable, Hashable {
     var width: Double
     var height: Double
 
-    init(x: Double, y: Double, width: Double, height: Double) {
+    init(x: Double = 0.0, y: Double = 0.0, width: Double = 1.0, height: Double = 1.0) {
         self.x = x
         self.y = y
         self.width = width
