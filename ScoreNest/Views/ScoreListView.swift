@@ -122,7 +122,7 @@ struct ScoreListView: View {
         }
     }
     
-    // MARK: - 清理未使用的图片
+    // MARK: - Clean up unused images
     private func cleanUnusedImages() {
         guard !isCleaningUnusedImages else { return }
         isCleaningUnusedImages = true
@@ -130,7 +130,7 @@ struct ScoreListView: View {
             let usedFileNames: Set<String> = Set(
                 scores.flatMap { score in
                     score.pages.map { page in
-                        // 取最后一个路径组件，支持 "ScoreNestImages/UUID.ext" 或绝对路径
+                        // Get the last path component, supports "ScoreNestImages/UUID.ext" or absolute paths
                         let comps = page.imageFileName.split(separator: "/")
                         return comps.last.map(String.init) ?? page.imageFileName
                     }
@@ -143,7 +143,7 @@ struct ScoreListView: View {
 
             do {
                 guard let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-                    throw NSError(domain: "ScoreNest", code: 2001, userInfo: [NSLocalizedDescriptionKey: "无法定位 Application Support 目录"]) 
+                    throw NSError(domain: "ScoreNest", code: 2001, userInfo: [NSLocalizedDescriptionKey: "Unable to locate Application Support directory"]) 
                 }
                 let imagesDir = appSupport.appendingPathComponent("ScoreNestImages", isDirectory: true)
 

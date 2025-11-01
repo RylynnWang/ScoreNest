@@ -124,7 +124,7 @@ struct CutImageForAutoPlayView: View {
             try modelContext.save()
             print("🔧 CutImageForAutoPlayView: Added segment order=\(nextOrder) speed=\(speedFactor) crop=\(c)")
         } catch {
-            print("保存裁剪片段失败: \(error)")
+            print("Failed to save cropped segment: \(error)")
         }
     }
 
@@ -154,7 +154,7 @@ private struct CropOverlay: View {
     let imageDisplaySize: CGSize
     let minSizeNormalized: Double
 
-    // 记录拖拽起点的矩形，用于稳定增量计算
+    // Record the starting rect for drag to stabilize incremental calculations
     @State private var startRect: RectSpec? = nil
 
     var body: some View {

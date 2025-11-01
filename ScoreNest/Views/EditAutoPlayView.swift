@@ -214,7 +214,7 @@ struct EditAutoPlayView: View {
         do {
             try modelContext.save()
         } catch {
-            print("删除失败: \(error)")
+            print("Failed to delete: \(error)")
         }
     }
 
@@ -230,11 +230,11 @@ struct EditAutoPlayView: View {
             try modelContext.save()
             print("🔧 EditAutoPlayView: Speed adjusted for segment order \(segment.order) to factor \(factor)")
         } catch {
-            print("保存失败: \(error)")
+            print("Failed to save: \(error)")
         }
     }
 
-    // MARK: - 交换 / 移动
+    // MARK: - Swap / Move
     private enum SegmentActionMode { case swap(sourceID: UUID), moveBefore(sourceID: UUID) }
 
     private func sourceSegment(for mode: SegmentActionMode) -> AutoPlaySegment? {
@@ -287,7 +287,7 @@ struct EditAutoPlayView: View {
             try modelContext.save()
             print("🔧 EditAutoPlayView: Swapped segments at indices \(i) and \(j)")
         } catch {
-            print("保存失败: \(error)")
+            print("Failed to save: \(error)")
         }
     }
 
@@ -307,13 +307,13 @@ struct EditAutoPlayView: View {
             try modelContext.save()
             print("🔧 EditAutoPlayView: Moved segment from index \(from) to before index \(toOriginal)")
         } catch {
-            print("保存失败: \(error)")
+            print("Failed to save: \(error)")
         }
     }
 
     private func ensureDefaultTimelineIfNeeded() {
         guard score.autoPlayTimeline == nil else { return }
-        let timeline = AutoPlayTimeline() // 使用模型默认值：title/时长/宽度
+        let timeline = AutoPlayTimeline() // Use model defaults: title/duration/width
         timeline.score = score
         
         let orderedPages = score.pages.sorted { $0.pageNumber < $1.pageNumber }
@@ -356,12 +356,12 @@ struct EditAutoPlayView: View {
             try modelContext.save()
             print("🔧 EditAutoPlayView: Save successful, timeline.defaultWidthRatio = \(t.defaultWidthRatio)")
         } catch {
-            print("保存失败: \(error)")
+            print("Failed to save: \(error)")
         }
     }
 }
 
-// MARK: - 片段裁剪预览视图
+// MARK: - Segment cropped preview view
 private struct SegmentCroppedPreviewView: View {
     let segment: AutoPlaySegment
 

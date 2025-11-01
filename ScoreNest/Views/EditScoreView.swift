@@ -93,7 +93,7 @@ struct EditScoreView: View {
                         try saveEdits()
                         dismiss()
                     } catch {
-                        print("保存失败: \(error)")
+                        print("Failed to save: \(error)")
                     }
                 }
                 .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -106,18 +106,18 @@ struct EditScoreView: View {
     }
 
     private func saveEdits() throws {
-        // 在保存前根据当前视图顺序校准页码，保证连续性
+        // Before saving, renumber pages according to current view order to ensure continuity
         renumberPagesAccordingToViewOrder()
         score.title = title
         
-        // 同步删除：将当前状态中不存在的页面从模型中删除
+        // Sync deletions: remove pages not present in the current state from the model
         let remainingIDs = Set(pages.map { $0.id })
         let toDelete = score.pages.filter { !remainingIDs.contains($0.id) }
         for p in toDelete {
             modelContext.delete(p)
         }
 
-        // 同步新增：将当前状态中新添加的页面插入到模型
+        // Sync insertions: insert newly added pages from the current state into the model
         let existingIDs = Set(score.pages.map { $0.id })
         let toInsert = pages.filter { !existingIDs.contains($0.id) }
         for p in toInsert {
@@ -132,18 +132,18 @@ struct EditScoreView: View {
     private func deletePageLocally(_ page: ScorePage) {
         withAnimation {
             pages.removeAll { $0.id == page.id }
-            // 删除后根据当前列表的显示顺序重新编号页码
+            // After deletion, renumber pages according to current list order
             renumberPagesAccordingToViewOrder()
             if let mode = actionMode, isSource(page: page, of: mode) { actionMode = nil }
         }
     }
     
     private func renumberPagesAccordingToViewOrder() {
-        // 按当前数组顺序重排页码 1...N
+        // Reorder page numbers 1...N according to the current array order
         for (index, p) in pages.enumerated() { p.pageNumber = index + 1 }
     }
     
-    // MARK: - 交换 / 移动
+    // MARK: - Swap / Move
     private enum ActionMode { case swap(sourceID: UUID), moveBefore(sourceID: UUID) }
     
     private func sourcePage(for mode: ActionMode) -> ScorePage? {
@@ -183,7 +183,7 @@ struct EditScoreView: View {
     }
     
     private func swapPages(sourceID: UUID, targetID: UUID) {
-        // 以当前可见顺序（按页码升序）为基准交换
+        // Swap based on current visible order (ascending by page number)
         var ordered = pages.sorted { $0.pageNumber < $1.pageNumber }
         guard let i = ordered.firstIndex(where: { $0.id == sourceID }),
               let j = ordered.firstIndex(where: { $0.id == targetID }) else { return }
@@ -194,7 +194,7 @@ struct EditScoreView: View {
     }
     
     private func movePageBefore(sourceID: UUID, targetID: UUID) {
-        // 以当前可见顺序为基准移动到目标之前
+        // Move before target based on current visible order
         var ordered = pages.sorted { $0.pageNumber < $1.pageNumber }
         guard let from = ordered.firstIndex(where: { $0.id == sourceID }),
               let toOriginal = ordered.firstIndex(where: { $0.id == targetID }) else { return }
@@ -211,10 +211,10 @@ struct EditScoreView: View {
 
 // MARK: - Photos Picker & File Saving
 extension EditScoreView {
-    // 统一管理图片子目录名称，避免到处写魔法字符串
+    // Centralize the image subdirectory name to avoid magic strings
     private var imagesSubdirectory: String { "ScoreNestImages" }
 
-    // 相对路径构造函数，避免直接字符串相加
+    // Relative path builder to avoid direct string concatenation
     private func relativeImagePath(for fileName: String) -> String {
         NSString.path(withComponents: [imagesSubdirectory, fileName])
     }
@@ -222,7 +222,7 @@ extension EditScoreView {
     private func imagesDirectoryURL() throws -> URL {
         let fm = FileManager.default
         guard let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-            throw NSError(domain: "ScoreNest", code: 1001, userInfo: [NSLocalizedDescriptionKey: "无法定位 Application Support 目录"])
+            throw NSError(domain: "ScoreNest", code: 1001, userInfo: [NSLocalizedDescriptionKey: "Unable to locate Application Support directory"])
         }
         let dir = appSupport.appendingPathComponent(imagesSubdirectory, isDirectory: true)
         if !fm.fileExists(atPath: dir.path) {
@@ -233,7 +233,7 @@ extension EditScoreView {
 
     private func saveImage(_ image: UIImage, with id: UUID) throws -> String {
         let dir = try imagesDirectoryURL() // .../Application Support/ScoreNestImages
-        // 尝试优先编码为 JPEG，失败则回退到 PNG，并同步更新扩展名
+        // Prefer encoding as JPEG; fall back to PNG on failure and update the extension accordingly
         let data: Data
         let ext: String
         if let jpeg = image.jpegData(compressionQuality: 0.90) {
@@ -243,11 +243,11 @@ extension EditScoreView {
             data = png
             ext = "png"
         } else {
-            throw NSError(domain: "ScoreNest", code: 1002, userInfo: [NSLocalizedDescriptionKey: "无法编码图片数据"])
+            throw NSError(domain: "ScoreNest", code: 1002, userInfo: [NSLocalizedDescriptionKey: "Unable to encode image data"])
         }
 
         let fileName = id.uuidString + "." + ext
-        // 这里的 dir 已经是 .../Application Support/ScoreNestImages，因此不需要再追加子目录
+        // The dir is already .../Application Support/ScoreNestImages, so no additional subdirectory is needed
         let absoluteURL = dir.appendingPathComponent(fileName, isDirectory: false)
         try data.write(to: absoluteURL, options: [.atomic])
         return relativeImagePath(for: fileName)
@@ -264,13 +264,13 @@ extension EditScoreView {
                     let relativePath = try saveImage(img, with: pageID)
                     let newPage = ScorePage(
                         id: pageID,
-                        imageFileName: relativePath, // 存相对路径 ScoreNestImages/<uuid>.jpg
+                        imageFileName: relativePath, // Store relative path ScoreNestImages/<uuid>.jpg
                         pageNumber: (pages.count + newPages.count + 1)
                     )
                     newPages.append(newPage)
                 }
             } catch {
-                print("添加图片失败: \(error)")
+                print("Failed to add image: \(error)")
             }
         }
         if !newPages.isEmpty {
@@ -279,7 +279,7 @@ extension EditScoreView {
                 renumberPagesAccordingToViewOrder()
             }
         }
-        // 清空选择，避免重复触发
+        // Clear selection to avoid repeated triggers
         selectedItems = []
     }
 }

@@ -34,7 +34,7 @@ struct SelectAutoPlayPageView: View {
             }
         }
         .navigationTitle("Select Score Page")
-        // 保留系统默认返回按钮，不再自定义左上角按钮
+        // Keep the system default back button; do not customize the top-left button
     }
 
     private func destinationView(for page: ScorePage) -> some View {
@@ -60,7 +60,7 @@ struct SelectAutoPlayPageView: View {
         do {
             try modelContext.save()
         } catch {
-            print("添加整页片段失败: \(error)")
+            print("Failed to add entire page segment: \(error)")
         }
     }
 }

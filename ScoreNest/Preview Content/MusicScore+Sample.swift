@@ -1,31 +1,31 @@
 import Foundation
 
 extension MusicScore {
-    // 动态计算项目根路径：从当前源文件开始向上查找包含 .xcodeproj 的目录
+    // Dynamically compute the project root: walk up from the current source file to find a directory containing an .xcodeproj
     static let projectBaseRoot: String = {
         let fileURL = URL(fileURLWithPath: #file)
         var dirURL = fileURL.deletingLastPathComponent() // .../ScoreNest/Preview Content
         let fm = FileManager.default
 
-        // 向上查找直到根目录或发现任意 .xcodeproj 目录
-        for _ in 0..<24 { // 合理上限，避免极端路径导致无限循环
+        // Walk upward until reaching the root or encountering any .xcodeproj directory
+        for _ in 0..<24 { // Reasonable upper bound to avoid infinite loops from extreme paths
             let items = (try? fm.contentsOfDirectory(atPath: dirURL.path)) ?? []
             if items.contains(where: { $0.hasSuffix(".xcodeproj") }) {
                 let path = dirURL.path
                 return path.hasSuffix("/") ? path : path + "/"
             }
             let parent = dirURL.deletingLastPathComponent()
-            if parent.path == dirURL.path { // 已到根目录
+            if parent.path == dirURL.path { // Reached the root directory
                 break
             }
             dirURL = parent
         }
 
-        // 回退：按常见结构返回上三级作为根 (/ScoreNest/ScoreNest/Preview Content → /ScoreNest)
+        // Fallback: ascend three levels as the root following common structure (/ScoreNest/ScoreNest/Preview Content → /ScoreNest)
         let fallback = fileURL
             .deletingLastPathComponent() // Preview Content
-            .deletingLastPathComponent() // ScoreNest (app 源码目录)
-            .deletingLastPathComponent() // 项目根目录
+            .deletingLastPathComponent() // ScoreNest (app source code directory)
+            .deletingLastPathComponent() // Project root directory
         let path = fallback.path
         return path.hasSuffix("/") ? path : path + "/"
     }()
