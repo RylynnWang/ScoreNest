@@ -111,6 +111,29 @@
         }
       }
     },
+    "Cannot find %@ in Documents. Open the Files app and place the package folder in Documents." : {
+      "comment" : "Missing import package with guidance",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未能在“文稿”中发现 %@。请打开“文件”App，将打包数据文件夹放在“文稿”目录中。"
+          }
+        }
+      }
+    },
+    "Cannot find scores.appdata" : {
+      "comment" : "Missing import package",
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未能找到 scores.appdata"
+          }
+        }
+      }
+    },
     "Clean Unused Images" : {
       "localizations" : {
         "zh-Hans" : {
@@ -132,11 +155,23 @@
       }
     },
     "Cleanup Complete" : {
+      "comment" : "Cleanup alert title\nCleanup alert title success",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "清理完成"
+          }
+        }
+      }
+    },
+    "Cleanup Failed" : {
+      "comment" : "Cleanup alert title failure",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清理失败"
           }
         }
       }
@@ -275,6 +310,7 @@
       }
     },
     "Export Complete" : {
+      "comment" : "Export alert title\nExport alert title success",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -290,6 +326,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "导出数据"
+          }
+        }
+      }
+    },
+    "Export Failed" : {
+      "comment" : "Export alert title failure",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出失败"
           }
         }
       }
@@ -327,6 +374,7 @@
       }
     },
     "Import Complete" : {
+      "comment" : "Import alert title\nImport alert title success",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -342,6 +390,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "导入数据"
+          }
+        }
+      }
+    },
+    "Import Failed" : {
+      "comment" : "Import alert title failure",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导入失败"
           }
         }
       }
@@ -579,6 +638,36 @@
         }
       }
     },
+    "Sort by Date" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按日期排序"
+          }
+        }
+      }
+    },
+    "Sort by Title" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按标题排序"
+          }
+        }
+      }
+    },
+    "Sort Order" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排序方式"
+          }
+        }
+      }
+    },
     "Speed ×" : {
       "localizations" : {
         "zh-Hans" : {
@@ -689,42 +778,23 @@
         }
       }
     },
+    "You can view it in the Files app." : {
+      "comment" : "Export success follow-up guidance",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可在“文件”App中查看。"
+          }
+        }
+      }
+    },
     "Your Scores" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的乐谱"
-          }
-        }
-      }
-    },
-    "Sort by Date" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "按日期排序"
-          }
-        }
-      }
-    },
-    "Sort by Title" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "按标题排序"
-          }
-        }
-      }
-    },
-    "Sort Order" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "排序方式"
           }
         }
       }

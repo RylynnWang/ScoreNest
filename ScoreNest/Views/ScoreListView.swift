@@ -21,6 +21,9 @@ struct ScoreListView: View {
     @State private var exportResultMessage: String = ""
     @State private var showImportResult: Bool = false
     @State private var importResultMessage: String = ""
+    @State private var cleanupAlertTitle: String = NSLocalizedString("Cleanup Complete", comment: "Cleanup alert title")
+    @State private var exportAlertTitle: String = NSLocalizedString("Export Complete", comment: "Export alert title")
+    @State private var importAlertTitle: String = NSLocalizedString("Import Complete", comment: "Import alert title")
 
     var body: some View {
         NavigationStack {
@@ -117,17 +120,17 @@ struct ScoreListView: View {
                     }
                 }
             }
-            .alert("Cleanup Complete", isPresented: $showCleanupResult) {
+            .alert(cleanupAlertTitle, isPresented: $showCleanupResult) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(cleanupResultMessage)
             }
-            .alert("Export Complete", isPresented: $showExportResult) {
+            .alert(exportAlertTitle, isPresented: $showExportResult) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(exportResultMessage)
             }
-            .alert("Import Complete", isPresented: $showImportResult) {
+            .alert(importAlertTitle, isPresented: $showImportResult) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(importResultMessage)
@@ -226,6 +229,7 @@ struct ScoreListView: View {
                 }
 
                 await MainActor.run {
+                    cleanupAlertTitle = NSLocalizedString("Cleanup Complete", comment: "Cleanup alert title success")
                     if failedFiles.isEmpty {
                         cleanupResultMessage = deletedCount > 0
                         ? String(
@@ -244,6 +248,7 @@ struct ScoreListView: View {
                 }
             } catch {
                 await MainActor.run {
+                    cleanupAlertTitle = NSLocalizedString("Cleanup Failed", comment: "Cleanup alert title failure")
                     cleanupResultMessage = String(
                         format: NSLocalizedString("Cleanup failed: %@", comment: "Image cleanup failure"),
                         error.localizedDescription
@@ -268,15 +273,19 @@ struct ScoreListView: View {
                 switch result {
                 case .success(let packageURL):
                     await MainActor.run {
-                        exportResultMessage = String(
+                        exportAlertTitle = NSLocalizedString("Export Complete", comment: "Export alert title success")
+                        let base = String(
                             format: NSLocalizedString("Exported to %@ in Documents.", comment: "Export success message with file name"),
                             packageURL.lastPathComponent
                         )
+                        let tip = NSLocalizedString("You can view it in the Files app.", comment: "Export success follow-up guidance")
+                        exportResultMessage = base + " " + tip
                         showExportResult = true
                     }
                 }
             } catch {
                 await MainActor.run {
+                    exportAlertTitle = NSLocalizedString("Export Failed", comment: "Export alert title failure")
                     exportResultMessage = String(
                         format: NSLocalizedString("Export failed: %@", comment: "Export failure with error description"),
                         error.localizedDescription
@@ -298,10 +307,22 @@ struct ScoreListView: View {
                     throw NSError(domain: "ScoreNest", code: 3001, userInfo: [NSLocalizedDescriptionKey: "无法定位 Documents 目录"]) 
                 }
                 let packageURL = documents.appendingPathComponent("scores.appdata", isDirectory: true)
+
+                // Pre-check that the target package directory exists; provide a localized error with guidance if missing
+                var isDir: ObjCBool = false
+                if !fm.fileExists(atPath: packageURL.path, isDirectory: &isDir) || !isDir.boolValue {
+                    let errMsg = String(
+                        format: NSLocalizedString("Cannot find %@ in Documents. Open the Files app and place the package folder in Documents.", comment: "Missing import package with guidance"),
+                        "scores.appdata"
+                    )
+                    throw NSError(domain: "ScoreNest", code: 3002, userInfo: [NSLocalizedDescriptionKey: errMsg])
+                }
+
                 let result = try AppDataIO.importFromPackage(at: packageURL, modelContext: modelContext)
                 switch result {
                 case .success(let importedScores, let importedPages, let importedSegments):
                     await MainActor.run {
+                        importAlertTitle = NSLocalizedString("Import Complete", comment: "Import alert title success")
                         importResultMessage = String(
                             format: NSLocalizedString("Imported %lld scores, %lld pages, %lld segments.", comment: "Import success counts"),
                             importedScores, importedPages, importedSegments
@@ -311,6 +332,7 @@ struct ScoreListView: View {
                 }
             } catch {
                 await MainActor.run {
+                    importAlertTitle = NSLocalizedString("Import Failed", comment: "Import alert title failure")
                     importResultMessage = String(
                         format: NSLocalizedString("Import failed: %@", comment: "Import failure with error description"),
                         error.localizedDescription
