@@ -134,7 +134,18 @@
         }
       }
     },
+    "Clean Unused Cache" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清理未使用缓存"
+          }
+        }
+      }
+    },
     "Clean Unused Images" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {

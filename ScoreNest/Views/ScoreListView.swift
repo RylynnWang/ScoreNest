@@ -86,7 +86,7 @@ struct ScoreListView: View {
                         Divider()
                         
                         Button(action: cleanUnusedImages) {
-                            Label("Clean Unused Images", systemImage: "trash")
+                            Label("Clean Unused Cache", systemImage: "trash")
                         }
                         Divider()
                         Button(action: exportAppData) {
