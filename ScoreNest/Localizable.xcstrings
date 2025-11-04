@@ -135,6 +135,7 @@
       }
     },
     "Clean Unused Cache" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -156,6 +157,7 @@
       }
     },
     "Cleaning unused images…" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -167,6 +169,7 @@
     },
     "Cleanup Complete" : {
       "comment" : "Cleanup alert title\nCleanup alert title success",
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -178,6 +181,7 @@
     },
     "Cleanup Failed" : {
       "comment" : "Cleanup alert title failure",
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -189,6 +193,7 @@
     },
     "Cleanup failed: %@" : {
       "comment" : "Image cleanup failure",
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -270,6 +275,7 @@
     },
     "Deleted %lld unused images; failed to delete the following files:\n%@" : {
       "comment" : "Image cleanup partial failure with file list",
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -281,6 +287,7 @@
     },
     "Deleted %lld unused images." : {
       "comment" : "Image cleanup count",
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -480,6 +487,7 @@
     },
     "No unused images found." : {
       "comment" : "Image cleanup none found",
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {

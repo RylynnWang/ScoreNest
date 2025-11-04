@@ -12,16 +12,12 @@ struct ScoreListView: View {
     }
 
     @State private var sortOption: SortOption = .dateDesc
-    @State private var isCleaningUnusedImages: Bool = false
     @State private var isExportingAppData: Bool = false
     @State private var isImportingAppData: Bool = false
-    @State private var showCleanupResult: Bool = false
-    @State private var cleanupResultMessage: String = ""
     @State private var showExportResult: Bool = false
     @State private var exportResultMessage: String = ""
     @State private var showImportResult: Bool = false
     @State private var importResultMessage: String = ""
-    @State private var cleanupAlertTitle: String = NSLocalizedString("Cleanup Complete", comment: "Cleanup alert title")
     @State private var exportAlertTitle: String = NSLocalizedString("Export Complete", comment: "Export alert title")
     @State private var importAlertTitle: String = NSLocalizedString("Import Complete", comment: "Import alert title")
 
@@ -72,7 +68,7 @@ struct ScoreListView: View {
                             .imageScale(.large)
                     }
                     .accessibilityLabel("New Score")
-                    .disabled(isCleaningUnusedImages || isExportingAppData || isImportingAppData)
+                    .disabled(isExportingAppData || isImportingAppData)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
@@ -82,11 +78,6 @@ struct ScoreListView: View {
                                 Label("Sort by Date", systemImage: "calendar").tag(SortOption.dateDesc)
                                 Label("Sort by Title", systemImage: "textformat.abc").tag(SortOption.titleAsc)
                             }
-                        }
-                        Divider()
-                        
-                        Button(action: cleanUnusedImages) {
-                            Label("Clean Unused Cache", systemImage: "trash")
                         }
                         Divider()
                         Button(action: exportAppData) {
@@ -100,17 +91,17 @@ struct ScoreListView: View {
                             .imageScale(.large)
                     }
                     .accessibilityLabel("More Actions")
-                    .disabled(isCleaningUnusedImages || isExportingAppData || isImportingAppData)
+                    .disabled(isExportingAppData || isImportingAppData)
                 }
             }
-            .disabled(isCleaningUnusedImages || isExportingAppData || isImportingAppData)
+            .disabled(isExportingAppData || isImportingAppData)
             .overlay {
-                if isCleaningUnusedImages || isExportingAppData || isImportingAppData {
+                if isExportingAppData || isImportingAppData {
                     ZStack {
                         Color.black.opacity(0.06).ignoresSafeArea()
                         VStack(spacing: 12) {
                             ProgressView()
-                            Text(isCleaningUnusedImages ? "Cleaning unused images…" : (isExportingAppData ? "Exporting data…" : "Importing data…"))
+                            Text(isExportingAppData ? "Exporting data…" : "Importing data…")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
@@ -119,11 +110,6 @@ struct ScoreListView: View {
                         .cornerRadius(12)
                     }
                 }
-            }
-            .alert(cleanupAlertTitle, isPresented: $showCleanupResult) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(cleanupResultMessage)
             }
             .alert(exportAlertTitle, isPresented: $showExportResult) {
                 Button("OK", role: .cancel) {}
@@ -169,6 +155,8 @@ struct ScoreListView: View {
         }
         do {
             try modelContext.save()
+            // Auto cleanup after deletion
+            cleanUnusedImagesSilently()
         } catch {
             print("Failed to delete scores: \(error)")
         }
@@ -178,15 +166,15 @@ struct ScoreListView: View {
         modelContext.delete(score)
         do {
             try modelContext.save()
+            // Auto cleanup after deletion
+            cleanUnusedImagesSilently()
         } catch {
             print("Failed to delete score: \(error)")
         }
     }
     
-    // MARK: - Clean up unused images
-    private func cleanUnusedImages() {
-        guard !isCleaningUnusedImages else { return }
-        isCleaningUnusedImages = true
+    // MARK: - Clean up unused images (silently, no user feedback)
+    private func cleanUnusedImagesSilently() {
         Task {
             let usedFileNames: Set<String> = Set(
                 scores.flatMap { score in
@@ -199,12 +187,10 @@ struct ScoreListView: View {
             )
 
             let fm = FileManager.default
-            var deletedCount = 0
-            var failedFiles: [String] = []
 
             do {
                 guard let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-                    throw NSError(domain: "ScoreNest", code: 2001, userInfo: [NSLocalizedDescriptionKey: "Unable to locate Application Support directory"]) 
+                    return
                 }
                 let imagesDir = appSupport.appendingPathComponent("ScoreNestImages", isDirectory: true)
 
@@ -218,47 +204,13 @@ struct ScoreListView: View {
                     for url in urls {
                         let name = url.lastPathComponent
                         if !usedFileNames.contains(name) {
-                            do {
-                                try fm.removeItem(at: url)
-                                deletedCount += 1
-                            } catch {
-                                failedFiles.append(name)
-                            }
+                            try? fm.removeItem(at: url)
                         }
                     }
                 }
-
-                await MainActor.run {
-                    cleanupAlertTitle = NSLocalizedString("Cleanup Complete", comment: "Cleanup alert title success")
-                    if failedFiles.isEmpty {
-                        cleanupResultMessage = deletedCount > 0
-                        ? String(
-                            format: NSLocalizedString("Deleted %lld unused images.", comment: "Image cleanup count"),
-                            Int64(deletedCount)
-                          )
-                        : String(localized: "No unused images found.")
-                    } else {
-                        let fileList = failedFiles.joined(separator: "\n")
-                        cleanupResultMessage = String(
-                            format: NSLocalizedString("Deleted %lld unused images; failed to delete the following files:\n%@", comment: "Image cleanup partial failure with file list"),
-                            Int64(deletedCount), fileList
-                        )
-                    }
-                    showCleanupResult = true
-                }
             } catch {
-                await MainActor.run {
-                    cleanupAlertTitle = NSLocalizedString("Cleanup Failed", comment: "Cleanup alert title failure")
-                    cleanupResultMessage = String(
-                        format: NSLocalizedString("Cleanup failed: %@", comment: "Image cleanup failure"),
-                        error.localizedDescription
-                    )
-                    showCleanupResult = true
-                }
-            }
-
-            await MainActor.run {
-                isCleaningUnusedImages = false
+                // Silently fail, no user notification
+                print("Silent cleanup failed: \(error)")
             }
         }
     }
@@ -269,6 +221,9 @@ struct ScoreListView: View {
         isExportingAppData = true
         Task {
             do {
+                // Clean unused images before export
+                await cleanUnusedImagesSync()
+                
                 let result = try AppDataIO.exportAll(toDocumentsWithName: "scores.appdata", modelContext: modelContext)
                 switch result {
                 case .success(let packageURL):
@@ -302,6 +257,9 @@ struct ScoreListView: View {
         isImportingAppData = true
         Task {
             do {
+                // Clean unused images before import
+                await cleanUnusedImagesSync()
+                
                 let fm = FileManager.default
                 guard let documents = fm.urls(for: .documentDirectory, in: .userDomainMask).first else {
                     throw NSError(domain: "ScoreNest", code: 3001, userInfo: [NSLocalizedDescriptionKey: "无法定位 Documents 目录"]) 
@@ -341,6 +299,44 @@ struct ScoreListView: View {
                 }
             }
             await MainActor.run { isImportingAppData = false }
+        }
+    }
+    
+    // MARK: - Synchronous cleanup helper
+    private func cleanUnusedImagesSync() async {
+        let usedFileNames: Set<String> = Set(
+            scores.flatMap { score in
+                score.pages.map { page in
+                    let comps = page.imageFileName.split(separator: "/")
+                    return comps.last.map(String.init) ?? page.imageFileName
+                }
+            }
+        )
+
+        let fm = FileManager.default
+
+        do {
+            guard let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+                return
+            }
+            let imagesDir = appSupport.appendingPathComponent("ScoreNestImages", isDirectory: true)
+
+            if fm.fileExists(atPath: imagesDir.path) {
+                let urls = try fm.contentsOfDirectory(
+                    at: imagesDir,
+                    includingPropertiesForKeys: nil,
+                    options: [.skipsHiddenFiles]
+                )
+
+                for url in urls {
+                    let name = url.lastPathComponent
+                    if !usedFileNames.contains(name) {
+                        try? fm.removeItem(at: url)
+                    }
+                }
+            }
+        } catch {
+            print("Sync cleanup failed: \(error)")
         }
     }
 }
