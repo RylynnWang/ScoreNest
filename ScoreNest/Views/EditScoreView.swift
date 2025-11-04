@@ -284,7 +284,7 @@ extension EditScoreView {
     }
 }
 
-#Preview(traits: .musicScoresSampleData) {
-    @Previewable @Query(sort: \MusicScore.createdAt, order: .reverse) var scores: [MusicScore]
-    EditScoreView(score: MusicScore.sampleScores.first!)
-}
+//#Preview(traits: .musicScoresSampleData) {
+//    @Previewable @Query(sort: \MusicScore.createdAt, order: .reverse) var scores: [MusicScore]
+//    EditScoreView(score: MusicScore.sampleScores.first!)
+//}

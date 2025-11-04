@@ -345,6 +345,6 @@ struct ScoreListView: View {
     }
 }
 
-#Preview(traits: .musicScoresSampleData) {
-    ScoreListView()
-}
+//#Preview(traits: .musicScoresSampleData) {
+//    ScoreListView()
+//}
