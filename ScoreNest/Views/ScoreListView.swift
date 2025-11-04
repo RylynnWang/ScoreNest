@@ -20,12 +20,13 @@ struct ScoreListView: View {
     @State private var importResultMessage: String = ""
     @State private var exportAlertTitle: String = NSLocalizedString("Export Complete", comment: "Export alert title")
     @State private var importAlertTitle: String = NSLocalizedString("Import Complete", comment: "Import alert title")
+    @State private var isCleanupSafe: Bool = true
 
     var body: some View {
         NavigationStack {
             List {
                 ForEach(displayScores) { score in
-                    NavigationLink(destination: ScoreView(score: score)) {
+                    NavigationLink(destination: ScoreView(score: score, isCleanupSafe: $isCleanupSafe)) {
                         HStack{
                             Text(score.title)
                             Spacer()
@@ -176,6 +177,9 @@ struct ScoreListView: View {
     // MARK: - Clean up unused images (silently, no user feedback)
     private func cleanUnusedImagesSilently() {
         Task {
+            // Lock editing during snapshot collection
+            await MainActor.run { isCleanupSafe = false }
+            
             let usedFileNames: Set<String> = Set(
                 scores.flatMap { score in
                     score.pages.map { page in
@@ -185,6 +189,9 @@ struct ScoreListView: View {
                     }
                 }
             )
+            
+            // Unlock editing immediately after collecting the snapshot
+            await MainActor.run { isCleanupSafe = true }
 
             let fm = FileManager.default
 
@@ -304,6 +311,9 @@ struct ScoreListView: View {
     
     // MARK: - Synchronous cleanup helper
     private func cleanUnusedImagesSync() async {
+        // Lock editing during snapshot collection
+        await MainActor.run { isCleanupSafe = false }
+        
         let usedFileNames: Set<String> = Set(
             scores.flatMap { score in
                 score.pages.map { page in
@@ -312,6 +322,9 @@ struct ScoreListView: View {
                 }
             }
         )
+        
+        // Unlock editing immediately after collecting the snapshot
+        await MainActor.run { isCleanupSafe = true }
 
         let fm = FileManager.default
 

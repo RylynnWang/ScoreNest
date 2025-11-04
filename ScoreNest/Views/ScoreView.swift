@@ -3,6 +3,7 @@ import SwiftData
 
 struct ScoreView: View {
     let score: MusicScore
+    @Binding var isCleanupSafe: Bool
     @State private var showAutoPlayAlert: Bool = false
     @State private var reloadToken = UUID()
 
@@ -23,9 +24,11 @@ struct ScoreView: View {
                     NavigationLink(destination: EditScoreView(score: score)) {
                         Label("Edit Score", systemImage: "pencil")
                     }
+                    .disabled(!isCleanupSafe)
                     NavigationLink(destination: EditAutoPlayView(score: score)) {
                         Label("Edit Autoplay", systemImage: "gearshape")
                     }
+                    .disabled(!isCleanupSafe)
                     if let tl = score.autoPlayTimeline {
                         NavigationLink(destination: AutoPlayView(timeline: tl)) {
                             Label("Start Autoplay", systemImage: "play.circle")
@@ -50,5 +53,5 @@ struct ScoreView: View {
 }
 
 #Preview {
-    ScoreView(score:MusicScore.sampleScores.first!)
+    ScoreView(score: MusicScore.sampleScores.first!, isCleanupSafe: .constant(true))
 }
