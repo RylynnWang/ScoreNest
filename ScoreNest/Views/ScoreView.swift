@@ -4,7 +4,7 @@ import SwiftData
 struct ScoreView: View {
     let score: MusicScore
     @State private var showAutoPlayAlert: Bool = false
-    @State private var reloadToken = 0
+    @State private var reloadToken = UUID()
 
     var body: some View {
         ZoomableScrollView(minScale: 0.20, maxScale: 5.0) {
@@ -45,7 +45,7 @@ struct ScoreView: View {
         .alert("Please edit autoplay first", isPresented: $showAutoPlayAlert) {
             Button("OK") {}
         }
-        .onAppear { reloadToken += 1 }
+        .onAppear { reloadToken = UUID() }
     }
 }
 
