@@ -159,7 +159,6 @@ struct AutoPlayScrollView: UIViewRepresentable {
 
             // Compute end offsets so that each segment's bottom aligns with viewport bottom
             // This makes a segment "fully visible" when reaching its end.
-            let viewportHeight = scrollView.bounds.height
             let maxScrollableY = max(0, scrollView.contentSize.height - viewportHeight)
             var ends: [CGFloat] = []
             for (idx, v) in stackView.arrangedSubviews.enumerated() {
