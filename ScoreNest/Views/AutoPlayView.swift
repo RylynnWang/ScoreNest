@@ -95,13 +95,15 @@ struct AutoPlayScrollView: UIViewRepresentable {
         var stackWidthConstraint: NSLayoutConstraint?
         var displayLink: CADisplayLink?
         var lastTimestamp: CFTimeInterval?
+        var startTimestamp: CFTimeInterval?
         var isPlaying: Bool = false
         var isPlayingBinding: Binding<Bool>?
 
-        // Playback metrics
-        var endOffsets: [CGFloat] = []
-        var speeds: [CGFloat] = []
-        var currentIndex: Int = 0
+        // Playback metrics: timeline-driven approach
+        var segmentEndOffsets: [CGFloat] = []  // Y offset where each segment ends
+        var segmentEndTimes: [CFTimeInterval] = []  // Time when each segment should end
+        var totalDuration: CFTimeInterval = 0
+        var currentSegmentIndex: Int = 0
 
         func configure(with timeline: AutoPlayTimeline, scrollView: UIScrollView, stackView: UIStackView) {
             self.scrollView = scrollView
@@ -157,35 +159,68 @@ struct AutoPlayScrollView: UIViewRepresentable {
             print("📊 [SETUP] WidthRatio: \(timeline.defaultWidthRatio)")
             print("📊 [SETUP] Segment count: \(segments.count)")
 
-            // Compute end offsets so that each segment's bottom aligns with viewport bottom
-            // This makes a segment "fully visible" when reaching its end.
+            // Compute segment distances and end offsets
             let maxScrollableY = max(0, scrollView.contentSize.height - viewportHeight)
-            var ends: [CGFloat] = []
+            var endOffsets: [CGFloat] = []
+            var distances: [CGFloat] = []
+            var previousEnd: CGFloat = 0
+            
             for (idx, v) in stackView.arrangedSubviews.enumerated() {
-                // bottom of v relative to content top = stackView.frame.minY + v.frame.maxY
                 let bottomY = stackView.frame.minY + v.frame.maxY
-                let endY = max(0, min(bottomY - viewportHeight, maxScrollableY))
-                ends.append(endY)
-                print("📊 [SEGMENT-\(idx)] Height: \(v.frame.height), EndOffset: \(endY)")
+                let endY: CGFloat
+                
+                if idx == stackView.arrangedSubviews.count - 1 {
+                    // Last segment must reach the absolute bottom
+                    endY = maxScrollableY
+                } else {
+                    endY = max(0, min(bottomY - viewportHeight, maxScrollableY))
+                }
+                
+                endOffsets.append(endY)
+                let distance = endY - previousEnd
+                distances.append(distance)
+                previousEnd = endY
+                
+                print("📊 [SEGMENT-\(idx)] Height: \(v.frame.height), EndOffset: \(endY), Distance: \(distance)")
             }
-            self.endOffsets = ends
 
-            // Simple mode speed calculation
-            let totalPixels: CGFloat = endOffsets.last ?? 0
-            let totalScrollDistance = scrollView.contentSize.height - viewportHeight
-            let base = totalPixels > 0 ? CGFloat(totalPixels) / CGFloat(timeline.baseScoreDurationSec) : 0
+            // Calculate time allocation using weighted distance method
+            let baseDuration = timeline.baseScoreDurationSec
+            let sortedSegments = timeline.segments.sorted { $0.order < $1.order }
             
-            print("📊 [CALC] Total scrollable distance: \(totalScrollDistance)")
-            print("📊 [CALC] Last endOffset (totalPixels): \(totalPixels)")
-            print("📊 [CALC] Base duration: \(timeline.baseScoreDurationSec)s")
-            print("📊 [CALC] Base speed: \(base) px/s")
-            
-            self.speeds = timeline.segments.sorted { $0.order < $1.order }.enumerated().map { idx, seg in
-                let speed = CGFloat(base) * CGFloat(seg.speedFactor)
-                print("📊 [SEGMENT-\(idx)] SpeedFactor: \(seg.speedFactor), Speed: \(speed) px/s")
-                return speed
+            // Step 1: Calculate total weighted distance
+            var totalWeightedDistance: CGFloat = 0
+            for (idx, seg) in sortedSegments.enumerated() {
+                guard idx < distances.count else { continue }
+                let weightedDist = distances[idx] / CGFloat(seg.speedFactor)
+                totalWeightedDistance += weightedDist
             }
-            self.currentIndex = 0
+            
+            // Step 2: Allocate time to each segment based on weighted distance
+            var segmentDurations: [CFTimeInterval] = []
+            var cumulativeTimes: [CFTimeInterval] = []
+            var accumulatedTime: CFTimeInterval = 0
+            
+            for (idx, seg) in sortedSegments.enumerated() {
+                guard idx < distances.count else { continue }
+                let weightedDist = distances[idx] / CGFloat(seg.speedFactor)
+                let segmentDuration = (Double(weightedDist) / Double(totalWeightedDistance)) * baseDuration
+                segmentDurations.append(segmentDuration)
+                accumulatedTime += segmentDuration
+                cumulativeTimes.append(accumulatedTime)
+                
+                let speed = distances[idx] / CGFloat(segmentDuration)
+                print("📊 [SEGMENT-\(idx)] Distance: \(String(format: "%.1f", distances[idx])), Duration: \(String(format: "%.2f", segmentDuration))s, Speed: \(String(format: "%.1f", speed)) px/s")
+            }
+            
+            self.segmentEndOffsets = endOffsets
+            self.segmentEndTimes = cumulativeTimes
+            self.totalDuration = baseDuration
+            self.currentSegmentIndex = 0
+            
+            print("📊 [CALC] Total scrollable distance: \(maxScrollableY)")
+            print("📊 [CALC] Total duration: \(baseDuration)s")
+            print("📊 [CALC] Total weighted distance: \(totalWeightedDistance)")
 
             // Start/stop will be controlled by setPlaying() invoked after configure
         }
@@ -217,6 +252,7 @@ struct AutoPlayScrollView: UIViewRepresentable {
             link.add(to: .main, forMode: .common)
             displayLink = link
             lastTimestamp = nil
+            startTimestamp = nil
         }
 
         func stop() {
@@ -226,49 +262,76 @@ struct AutoPlayScrollView: UIViewRepresentable {
             displayLink?.invalidate()
             displayLink = nil
             lastTimestamp = nil
+            startTimestamp = nil
         }
 
         @objc private func tick(_ link: CADisplayLink) {
             guard let scrollView else { return }
-            guard !endOffsets.isEmpty, !speeds.isEmpty else { return }
+            guard !segmentEndOffsets.isEmpty, !segmentEndTimes.isEmpty else { return }
 
-            // Do not fight user gestures; skip updates while dragging/decelerating
+            // Do not fight user gestures
             if scrollView.isDragging || scrollView.isDecelerating {
                 lastTimestamp = link.timestamp
+                startTimestamp = link.timestamp
                 return
             }
 
-            let dt: CFTimeInterval
-            if let last = lastTimestamp { 
-                dt = link.timestamp - last 
-            } else { 
-                dt = link.duration
-                print("⏱️ [TICK] First frame: dt = \(dt) (using link.duration)")
+            // Skip first frame to get accurate timestamp baseline
+            if startTimestamp == nil {
+                lastTimestamp = link.timestamp
+                startTimestamp = link.timestamp
+                print("⏱️ [TICK] First frame: recording timestamp, skipping update")
+                return
             }
+
+            let elapsed = link.timestamp - startTimestamp!
             lastTimestamp = link.timestamp
 
-            let speed = speeds[min(currentIndex, speeds.count - 1)]
-            let oldY = scrollView.contentOffset.y
-            var newY = oldY + CGFloat(dt) * speed
-            let segmentEnd = endOffsets[min(currentIndex, endOffsets.count - 1)]
-
-            if newY >= segmentEnd {
-                newY = segmentEnd
-                print("⏱️ [TICK] Segment \(currentIndex) completed at y=\(newY)")
-                currentIndex += 1
-                if currentIndex >= endOffsets.count {
-                    // Reached end; stop
-                    print("⏱️ [TICK] ✅ Playback finished at timestamp \(link.timestamp)")
-                    stop()
-                    // Sync playing state to UI (auto pause)
-                    isPlayingBinding?.wrappedValue = false
-                    return
+            // Find which segment we should be in based on elapsed time
+            var targetSegment = 0
+            for (idx, endTime) in segmentEndTimes.enumerated() {
+                if elapsed < endTime {
+                    targetSegment = idx
+                    break
                 }
+                targetSegment = idx + 1
+            }
+            
+            // Check if playback is complete
+            if targetSegment >= segmentEndOffsets.count {
+                let finalY = segmentEndOffsets.last ?? 0
+                scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: finalY), animated: false)
+                print("⏱️ [TICK] ✅ Playback finished: total time = \(String(format: "%.2f", elapsed))s")
+                stop()
+                isPlayingBinding?.wrappedValue = false
+                return
+            }
+            
+            // Calculate target Y position based on time progress within current segment
+            let segmentStartTime: CFTimeInterval = targetSegment > 0 ? segmentEndTimes[targetSegment - 1] : 0
+            let segmentEndTime = segmentEndTimes[targetSegment]
+            let segmentStartY: CGFloat = targetSegment > 0 ? segmentEndOffsets[targetSegment - 1] : 0
+            let segmentEndY = segmentEndOffsets[targetSegment]
+            
+            let timeInSegment = elapsed - segmentStartTime
+            let segmentDuration = segmentEndTime - segmentStartTime
+            let progress = min(1.0, timeInSegment / segmentDuration)
+            
+            let targetY = segmentStartY + (segmentEndY - segmentStartY) * CGFloat(progress)
+
+            // Update segment index for logging
+            if targetSegment != currentSegmentIndex {
+                print("⏱️ [TICK] Segment \(currentSegmentIndex) completed at y=\(segmentEndOffsets[currentSegmentIndex]), t=\(String(format: "%.2f", elapsed))s")
+                currentSegmentIndex = targetSegment
             }
 
-            // Preserve current horizontal offset to avoid breaking centering
-            let currentX = scrollView.contentOffset.x
-            scrollView.setContentOffset(CGPoint(x: currentX, y: newY), animated: false)
+            // Log progress every 5 seconds
+            let elapsedInt = Int(elapsed)
+            if elapsedInt % 5 == 0 && abs(elapsed - Double(elapsedInt)) < 0.1 {
+                print("⏱️ [PROGRESS] t=\(String(format: "%.1f", elapsed))s, y=\(String(format: "%.1f", targetY)), seg=\(targetSegment), progress=\(String(format: "%.1f%%", progress * 100))")
+            }
+
+            scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: targetY), animated: false)
         }
 
         func setPlaying(_ playing: Bool) {
@@ -303,10 +366,10 @@ struct AutoPlayScrollView: UIViewRepresentable {
         }
 
         private func updateCurrentIndex(forY y: CGFloat) {
-            guard !endOffsets.isEmpty else { currentIndex = 0; return }
+            guard !segmentEndOffsets.isEmpty else { currentSegmentIndex = 0; return }
             var idx = 0
-            while idx < endOffsets.count && y >= endOffsets[idx] { idx += 1 }
-            currentIndex = min(idx, endOffsets.count - 1)
+            while idx < segmentEndOffsets.count && y >= segmentEndOffsets[idx] { idx += 1 }
+            currentSegmentIndex = min(idx, segmentEndOffsets.count - 1)
         }
         private func loadUIImage(named: String) -> UIImage? {
             if let img = UIImage(named: named) { return img }

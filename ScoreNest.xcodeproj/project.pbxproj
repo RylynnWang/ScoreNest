@@ -267,9 +267,12 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2FV3YD69FF;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ScoreNest/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Musical Score Nest";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app requires access to your photo library so you can select images containing sheet music (such as photos of scores, handwritten notes, or PDF screenshots) to import, manage or practice within the app.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -302,9 +305,12 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2FV3YD69FF;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ScoreNest/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Musical Score Nest";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app requires access to your photo library so you can select images containing sheet music (such as photos of scores, handwritten notes, or PDF screenshots) to import, manage or practice within the app.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
