@@ -32,8 +32,6 @@ struct AutoPlayScrollView: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeUIView(context: Context) -> UIScrollView {
-        print("🔧 AutoPlayView: Creating UIScrollView with defaultWidthRatio = \(timeline.defaultWidthRatio)")
-        
         let scrollView = UIScrollView()
         scrollView.backgroundColor = .systemBackground
         scrollView.showsVerticalScrollIndicator = false
@@ -50,8 +48,6 @@ struct AutoPlayScrollView: UIViewRepresentable {
         contentView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(contentView)
 
-        print("🔧 AutoPlayView: contentView pinned to contentLayoutGuide; width driven by stack width")
-        
         // Pin contentView to scrollView content layout guide on all sides
         // Width will be driven by inner stack's explicit width constraint
         NSLayoutConstraint.activate([
@@ -108,14 +104,11 @@ struct AutoPlayScrollView: UIViewRepresentable {
         var currentIndex: Int = 0
 
         func configure(with timeline: AutoPlayTimeline, scrollView: UIScrollView, stackView: UIStackView) {
-            print("🔧 Coordinator: Starting configure with defaultWidthRatio = \(timeline.defaultWidthRatio)")
-            
             self.scrollView = scrollView
             self.stackView = stackView
 
             // Build segment views
             let segments = timeline.segments.sorted { $0.order < $1.order }
-            print("🔧 Coordinator: Processing \(segments.count) segments")
             
             for seg in segments {
                 guard let src = seg.sourcePage, let image = loadUIImage(named: src.imageFileName) else { continue }
@@ -145,7 +138,6 @@ struct AutoPlayScrollView: UIViewRepresentable {
             scrollView.layoutIfNeeded()
             let viewportWidth = scrollView.bounds.width
             let targetContentWidth = viewportWidth * CGFloat(timeline.defaultWidthRatio)
-            print("🔧 Coordinator: viewportWidth = \(viewportWidth), targetContentWidth = \(targetContentWidth)")
 
             // Drive content width by setting explicit stack width constraint
             let widthConstraint = stackView.widthAnchor.constraint(equalToConstant: targetContentWidth)
@@ -155,29 +147,45 @@ struct AutoPlayScrollView: UIViewRepresentable {
             // Relayout to apply width and compute content size
             scrollView.layoutIfNeeded()
             
-            print("🔧 Coordinator: After layoutIfNeeded - scrollView.bounds = \(scrollView.bounds)")
-            print("🔧 Coordinator: After layoutIfNeeded - scrollView.contentSize = \(scrollView.contentSize)")
-            print("🔧 Coordinator: After layoutIfNeeded - stackView.bounds = \(stackView.bounds)")
-            
             updateHorizontalInsets()
+            
+            // 📊 DEBUG: Log viewport and content dimensions
+            let viewportHeight = scrollView.bounds.height
+            let contentHeight = scrollView.contentSize.height
+            print("📊 [SETUP] Viewport: \(viewportWidth) × \(viewportHeight)")
+            print("📊 [SETUP] Content size: \(scrollView.contentSize.width) × \(contentHeight)")
+            print("📊 [SETUP] WidthRatio: \(timeline.defaultWidthRatio)")
+            print("📊 [SETUP] Segment count: \(segments.count)")
 
             // Compute end offsets so that each segment's bottom aligns with viewport bottom
             // This makes a segment "fully visible" when reaching its end.
             let viewportHeight = scrollView.bounds.height
             let maxScrollableY = max(0, scrollView.contentSize.height - viewportHeight)
             var ends: [CGFloat] = []
-            for v in stackView.arrangedSubviews {
+            for (idx, v) in stackView.arrangedSubviews.enumerated() {
                 // bottom of v relative to content top = stackView.frame.minY + v.frame.maxY
                 let bottomY = stackView.frame.minY + v.frame.maxY
                 let endY = max(0, min(bottomY - viewportHeight, maxScrollableY))
                 ends.append(endY)
+                print("📊 [SEGMENT-\(idx)] Height: \(v.frame.height), EndOffset: \(endY)")
             }
             self.endOffsets = ends
 
             // Simple mode speed calculation
             let totalPixels: CGFloat = endOffsets.last ?? 0
+            let totalScrollDistance = scrollView.contentSize.height - viewportHeight
             let base = totalPixels > 0 ? CGFloat(totalPixels) / CGFloat(timeline.baseScoreDurationSec) : 0
-            self.speeds = timeline.segments.sorted { $0.order < $1.order }.map { CGFloat(base) * CGFloat($0.speedFactor) }
+            
+            print("📊 [CALC] Total scrollable distance: \(totalScrollDistance)")
+            print("📊 [CALC] Last endOffset (totalPixels): \(totalPixels)")
+            print("📊 [CALC] Base duration: \(timeline.baseScoreDurationSec)s")
+            print("📊 [CALC] Base speed: \(base) px/s")
+            
+            self.speeds = timeline.segments.sorted { $0.order < $1.order }.enumerated().map { idx, seg in
+                let speed = CGFloat(base) * CGFloat(seg.speedFactor)
+                print("📊 [SEGMENT-\(idx)] SpeedFactor: \(seg.speedFactor), Speed: \(speed) px/s")
+                return speed
+            }
             self.currentIndex = 0
 
             // Start/stop will be controlled by setPlaying() invoked after configure
@@ -197,7 +205,6 @@ struct AutoPlayScrollView: UIViewRepresentable {
             widthConstraint.constant = viewportWidth * timelineRatio
             scrollView.layoutIfNeeded()
             updateHorizontalInsets()
-            print("🔧 scrollViewDidLayoutSubviews: viewportWidth = \(viewportWidth), new stackWidth = \(widthConstraint.constant), contentSize = \(scrollView.contentSize)")
         }
 
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -206,6 +213,7 @@ struct AutoPlayScrollView: UIViewRepresentable {
 
         func start() {
             stop()
+            print("⏱️ [PLAYBACK] ▶️ Starting playback from y=\(scrollView?.contentOffset.y ?? 0)")
             let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
             link.add(to: .main, forMode: .common)
             displayLink = link
@@ -213,6 +221,9 @@ struct AutoPlayScrollView: UIViewRepresentable {
         }
 
         func stop() {
+            if displayLink != nil {
+                print("⏱️ [PLAYBACK] ⏸️ Stopping playback at y=\(scrollView?.contentOffset.y ?? 0)")
+            }
             displayLink?.invalidate()
             displayLink = nil
             lastTimestamp = nil
@@ -229,18 +240,26 @@ struct AutoPlayScrollView: UIViewRepresentable {
             }
 
             let dt: CFTimeInterval
-            if let last = lastTimestamp { dt = link.timestamp - last } else { dt = link.duration }
+            if let last = lastTimestamp { 
+                dt = link.timestamp - last 
+            } else { 
+                dt = link.duration
+                print("⏱️ [TICK] First frame: dt = \(dt) (using link.duration)")
+            }
             lastTimestamp = link.timestamp
 
             let speed = speeds[min(currentIndex, speeds.count - 1)]
-            var newY = scrollView.contentOffset.y + CGFloat(dt) * speed
+            let oldY = scrollView.contentOffset.y
+            var newY = oldY + CGFloat(dt) * speed
             let segmentEnd = endOffsets[min(currentIndex, endOffsets.count - 1)]
 
             if newY >= segmentEnd {
                 newY = segmentEnd
+                print("⏱️ [TICK] Segment \(currentIndex) completed at y=\(newY)")
                 currentIndex += 1
                 if currentIndex >= endOffsets.count {
                     // Reached end; stop
+                    print("⏱️ [TICK] ✅ Playback finished at timestamp \(link.timestamp)")
                     stop()
                     // Sync playing state to UI (auto pause)
                     isPlayingBinding?.wrappedValue = false
@@ -279,12 +298,9 @@ struct AutoPlayScrollView: UIViewRepresentable {
                 targetX = max(0, (contentWidth - boundsWidth) / 2)
             }
 
-            print("🔧 updateHorizontalInsets: boundsWidth = \(boundsWidth), contentWidth = \(contentWidth), inset = \(inset), centerX = \(targetX)")
-
             if abs(scrollView.contentOffset.x - targetX) > 0.5 {
                 scrollView.setContentOffset(CGPoint(x: targetX, y: scrollView.contentOffset.y), animated: false)
             }
-            print("🔧 updateHorizontalInsets: applied contentInset = \(scrollView.contentInset), offsetX = \(scrollView.contentOffset.x)")
         }
 
         private func updateCurrentIndex(forY y: CGFloat) {
