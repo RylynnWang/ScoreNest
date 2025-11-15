@@ -236,7 +236,7 @@ extension EditScoreView {
         // Prefer encoding as JPEG; fall back to PNG on failure and update the extension accordingly
         let data: Data
         let ext: String
-        if let jpeg = image.jpegData(compressionQuality: 0.90) {
+        if let jpeg = image.jpegData(compressionQuality: 1.0) {
             data = jpeg
             ext = "jpg"
         } else if let png = image.pngData() {
