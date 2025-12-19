@@ -16,7 +16,7 @@
 
 ## 系统要求
 
-- iOS 17.0 或更高版本
+- iOS 17.6 或更高版本
 - Xcode 15.0 或更高版本
 - SwiftUI 和 SwiftData 支持
 

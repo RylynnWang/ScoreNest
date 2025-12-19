@@ -16,7 +16,7 @@ A simple iOS sheet music management application that supports sheet music browsi
 
 ## Requirements
 
-- iOS 17.0+
+- iOS 17.6+
 - Xcode 15.0+
 - SwiftUI and SwiftData support
 
