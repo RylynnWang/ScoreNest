@@ -1,38 +1,40 @@
 # ScoreNest
 
-一个简单的 iOS 乐谱管理应用，支持乐谱浏览、自动翻页播放及数据导入导出。
+English | [中文](./README_CN.md)
 
-## 功能特性
+A simple iOS sheet music management application that supports sheet music browsing, auto-paging playback, and data import/export.
 
-- 📚 **乐谱管理**：创建、编辑和组织你的乐谱集合
-- 📄 **多页浏览**：支持导入多页乐谱图片，流畅浏览
-- 🎵 **自动播放**：自定义时间轴，自动翻页播放乐谱
-- ✂️ **区域裁剪**：为自动播放精确裁剪乐谱区域
-- 🔍 **缩放查看**：支持手势缩放，查看乐谱细节
-- 💾 **数据导入导出**：轻松备份和恢复所有乐谱数据
-- 🗂️ **智能排序**：按日期或标题排序乐谱
+## Features
 
-## 系统要求
+- 📚 **Sheet Music Management**: Create, edit, and organize your sheet music collection.
+- 📄 **Multi-page Browsing**: Supports importing multi-page sheet music images with smooth browsing.
+- 🎵 **Auto Play**: Customize timelines and automatically turn pages for sheet music playback.
+- ✂️ **Area Cropping**: Precisely crop sheet music areas for auto-playback.
+- 🔍 **Zoom View**: Supports gesture zooming to view sheet music details.
+- 💾 **Data Import/Export**: Easily backup and restore all sheet music data.
+- 🗂️ **Smart Sorting**: Sort sheet music by date or title.
 
-- iOS 17.0 或更高版本
-- Xcode 15.0 或更高版本
-- SwiftUI 和 SwiftData 支持
+## Requirements
 
-## 项目结构
+- iOS 17.0+
+- Xcode 15.0+
+- SwiftUI and SwiftData support
+
+## Project Structure
 
 ```
 ScoreNest/
-├── Models/              # 数据模型
+├── Models/              # Data Models
 │   ├── MusicScore.swift
 │   ├── ScorePage.swift
 │   ├── AutoPlayTimeline.swift
 │   └── AutoPlaySegment.swift
-├── Views/               # 视图组件
+├── Views/               # View Components
 │   ├── ScoreListView.swift
 │   ├── ScoreView.swift
 │   ├── EditScoreView.swift
 │   ├── AutoPlayView.swift
 │   └── ...
-├── AppDataIO.swift      # 数据导入导出逻辑
-└── ScoreNestApp.swift   # 应用入口
+├── AppDataIO.swift      # Data Import/Export Logic
+└── ScoreNestApp.swift   # App Entry Point
 ```
