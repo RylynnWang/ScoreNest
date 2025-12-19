@@ -98,6 +98,7 @@ struct AutoPlayScrollView: UIViewRepresentable {
         var startTimestamp: CFTimeInterval?
         var isPlaying: Bool = false
         var isPlayingBinding: Binding<Bool>?
+        var pendingResumeY: CGFloat?
 
         // Playback metrics: timeline-driven approach
         var segmentEndOffsets: [CGFloat] = []  // Y offset where each segment ends
@@ -247,7 +248,8 @@ struct AutoPlayScrollView: UIViewRepresentable {
 
         func start() {
             stop()
-            print("⏱️ [PLAYBACK] ▶️ Starting playback from y=\(scrollView?.contentOffset.y ?? 0)")
+            pendingResumeY = scrollView?.contentOffset.y
+            print("⏱️ [PLAYBACK] ▶️ Starting playback from y=\(pendingResumeY ?? 0)")
             let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
             link.add(to: .main, forMode: .common)
             displayLink = link
@@ -271,16 +273,20 @@ struct AutoPlayScrollView: UIViewRepresentable {
 
             // Do not fight user gestures
             if scrollView.isDragging || scrollView.isDecelerating {
+                pendingResumeY = scrollView.contentOffset.y
                 lastTimestamp = link.timestamp
-                startTimestamp = link.timestamp
+                startTimestamp = nil
                 return
             }
 
             // Skip first frame to get accurate timestamp baseline
             if startTimestamp == nil {
                 lastTimestamp = link.timestamp
-                startTimestamp = link.timestamp
-                print("⏱️ [TICK] First frame: recording timestamp, skipping update")
+                let resumeY = pendingResumeY ?? scrollView.contentOffset.y
+                let resumeElapsed = playbackElapsed(forY: resumeY)
+                startTimestamp = link.timestamp - resumeElapsed
+                pendingResumeY = nil
+                print("⏱️ [TICK] Sync baseline: y=\(String(format: "%.1f", resumeY)), elapsed=\(String(format: "%.2f", resumeElapsed))s")
                 return
             }
 
@@ -370,6 +376,29 @@ struct AutoPlayScrollView: UIViewRepresentable {
             var idx = 0
             while idx < segmentEndOffsets.count && y >= segmentEndOffsets[idx] { idx += 1 }
             currentSegmentIndex = min(idx, segmentEndOffsets.count - 1)
+        }
+        
+        private func playbackElapsed(forY y: CGFloat) -> CFTimeInterval {
+            guard !segmentEndOffsets.isEmpty, !segmentEndTimes.isEmpty else { return 0 }
+            
+            let maxY = segmentEndOffsets.last ?? 0
+            let clampedY = min(max(y, 0), maxY)
+            
+            var idx = 0
+            while idx < segmentEndOffsets.count && clampedY > segmentEndOffsets[idx] { idx += 1 }
+            idx = min(max(idx, 0), min(segmentEndOffsets.count - 1, segmentEndTimes.count - 1))
+            
+            let segmentStartY: CGFloat = idx > 0 ? segmentEndOffsets[idx - 1] : 0
+            let segmentEndY: CGFloat = segmentEndOffsets[idx]
+            
+            let segmentStartTime: CFTimeInterval = idx > 0 ? segmentEndTimes[idx - 1] : 0
+            let segmentEndTime: CFTimeInterval = segmentEndTimes[idx]
+            
+            let denom = segmentEndY - segmentStartY
+            if abs(denom) < 0.0001 { return segmentStartTime }
+            
+            let progress = min(1, max(0, (clampedY - segmentStartY) / denom))
+            return segmentStartTime + Double(progress) * (segmentEndTime - segmentStartTime)
         }
         private func loadUIImage(named: String) -> UIImage? {
             if let img = UIImage(named: named) { return img }
